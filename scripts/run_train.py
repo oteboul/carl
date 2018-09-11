@@ -1,3 +1,9 @@
+"""
+To train a DQL Agent to drive a car, from the carl/ directory run
+
+python3 -m scripts.run_train
+"""
+
 import argparse
 
 from src.environment import Environment
