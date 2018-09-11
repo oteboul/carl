@@ -1,6 +1,8 @@
 import argparse
-from environment import Environment
-from agent import DQLAgent
+
+from src.environment import Environment
+from src.agent import DQLAgent
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
