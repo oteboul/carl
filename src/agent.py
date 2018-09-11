@@ -3,7 +3,7 @@ import random
 import numpy as np
 from collections import deque
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Conv1D, Flatten
 from keras.optimizers import Adam
 
 
@@ -28,9 +28,9 @@ class DQLAgent(object):
     def _build_model(self):
         """Neural Net for Deep-Q learning Model"""
         model = Sequential()
-        model.add(Dense(32, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(48, input_dim=self.state_size, activation='relu'))
         model.add(Dense(32, activation='relu'))
-        model.add(Dense(32, activation='relu'))
+        model.add(Dense(24, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse',
                       optimizer=Adam(lr=self.learning_rate))

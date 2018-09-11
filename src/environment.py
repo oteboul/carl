@@ -1,6 +1,6 @@
-from car import Car
-from circuit import Circuit
-from ui import Interface
+from src.car import Car
+from src.circuit import Circuit
+from src.ui import Interface
 
 
 class Environment(object):
@@ -43,8 +43,8 @@ class Environment(object):
     def reward(self) -> float:
         """Computes the reward at the present moment"""
         isCrash = self.car.car not in self.circuit
-        return (self.car.speed - self.car.SPEED_UNIT) * self.speed_value + \
-            int(isCrash) * self.crash_value
+        unit = self.car.speed / self.car.SPEED_UNIT
+        return unit ** 2 + int(isCrash) * self.crash_value
 
     def isEnd(self) -> bool:
         """Is the episode over ?"""
