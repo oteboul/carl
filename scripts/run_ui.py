@@ -1,6 +1,6 @@
-from car import Car
-from circuit import Circuit
-from ui import Interface
+from src.car import Car
+from src.circuit import Circuit
+from src.ui import Interface
 
 
 if __name__ == '__main__':
