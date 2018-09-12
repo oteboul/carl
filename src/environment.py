@@ -4,9 +4,7 @@ from src.ui import Interface
 
 
 class Environment(object):
-    def __init__(
-            self, num_sensors=5, render=False,
-            crash_value=0, checkpoint_value=0, speed_value=10):
+    def __init__(self, num_sensors=5, render=False, crash_value=0):
 
         # The geometry of the circuit and the position of the car.
         coords = [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)]
@@ -37,14 +35,13 @@ class Environment(object):
 
         # Used for the rewards
         self.crash_value = crash_value
-        self.speed_value = speed_value
         self.count = 0
 
     def reward(self) -> float:
         """Computes the reward at the present moment"""
         isCrash = self.car.car not in self.circuit
         unit = self.car.speed / self.car.SPEED_UNIT
-        return unit ** 2 + int(isCrash) * self.crash_value
+        return unit ** 1.1 + int(isCrash) * self.crash_value
 
     def isEnd(self) -> bool:
         """Is the episode over ?"""

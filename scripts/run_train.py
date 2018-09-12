@@ -20,12 +20,16 @@ if __name__ == '__main__':
     parser.add_argument('--epsilon', type=float, default=1.00)
     parser.add_argument('--epsilon_decay', type=float, default=0.99)
     parser.add_argument('--learning_rate', type=float, default=0.1)
+    parser.add_argument('--crash_value', type=float, default=-3)
     args = parser.parse_args()
 
-    env = Environment(num_sensors=args.num_sensors, render=True)
+    env = Environment(
+        num_sensors=args.num_sensors, crash_value=args.crash_value, render=True)
+
     agent = DQLAgent(
         state_size=args.num_sensors + 1, action_size=len(env.actions),
         gamma=args.gamma, epsilon=args.epsilon,
         epsilon_decay=args.epsilon_decay, learning_rate=args.learning_rate)
+
     agent.train(
         env, episodes=args.num_episodes, minibatch=args.minibatch_size)
