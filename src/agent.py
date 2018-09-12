@@ -1,6 +1,9 @@
+import logging
+import keras.models
 import os
 import random
 import numpy as np
+
 from collections import deque
 from keras.models import Sequential
 from keras.layers import Dense
@@ -39,12 +42,14 @@ class DQLAgent(object):
     def save(self):
         self.model.save(self.BACKUP)
 
-    def load(self):
-        if os.path.isfile(self.BACKUP):
-            model = self._build_model()
-            model.load_weights(self.BACKUP)
-            self.exploration_rate = self.exploration_min
-        return model
+    def load(self, filename=None):
+        name = self.BACKUP if filename is None else filename
+        if os.path.isfile(name):
+            self.model = keras.models.load_model(name)
+            return True
+        else:
+            logging.error('no such file {}'.format(name))
+            return False
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
@@ -68,7 +73,7 @@ class DQLAgent(object):
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-    def trainOne(self, env, greedy=True):
+    def run_once(self, env, train=True, greedy=False):
         self.count += 1
         state = env.reset()
         state = np.reshape(state, [1, self.state_size])
@@ -79,7 +84,8 @@ class DQLAgent(object):
             action = self.act(state, greedy=greedy)
             next_state, reward, done = env.step(action, greedy)
             next_state = np.reshape(next_state, [1, self.state_size])
-            if not greedy:
+
+            if train:
                 self.remember(state, action, reward, next_state, done)
 
             returns = returns * self.gamma + reward
@@ -94,7 +100,7 @@ class DQLAgent(object):
 
     def train(self, env, episodes, minibatch, render=False):
         for e in range(episodes):
-            r = self.trainOne(env, greedy=False)
+            r = self.run_once(env, train=True, greedy=False)
             print("episode: {}/{}, return: {}, e: {:.2}".format(
                 e, episodes, r, self.epsilon))
 
@@ -103,6 +109,6 @@ class DQLAgent(object):
                 self.save()
 
         # Finally runs a greedy one
-        r = self.trainOne(env, greedy=True)
+        r = self.run_once(env, train=False, greedy=True)
         self.save()
         print("Greedy return: {}".format(r))
