@@ -18,8 +18,6 @@ class Circuit(object):
         # circuit.
         self.dilated = self.line.buffer(self.width * 1.01, cap_style=1)
 
-        self.num_checkpoints = 30
-
     def __contains__(self, shape):
         return self.dilated.contains(shape)
 

@@ -11,11 +11,10 @@ from keras.optimizers import Adam
 
 
 class DQLAgent(object):
-    BACKUP = 'carl_weights.h5'
-
     def __init__(
             self, state_size, action_size, max_steps=200,
-            gamma=0.95, epsilon=1.0, epsilon_decay=0.99, learning_rate=0.1):
+            gamma=0.95, epsilon=1.0, epsilon_decay=0.99, learning_rate=0.1,
+            output='weights.h5'):
         self.state_size = state_size
         self.action_size = action_size
         self.max_steps = max_steps
@@ -26,6 +25,7 @@ class DQLAgent(object):
         self.epsilon_decay = epsilon_decay
         self.learning_rate = learning_rate
         self.model = self._build_model()
+        self.output = output
         self.count = 0
 
     def _build_model(self):
@@ -40,15 +40,14 @@ class DQLAgent(object):
         return model
 
     def save(self):
-        self.model.save(self.BACKUP)
+        self.model.save(self.output)
 
-    def load(self, filename=None):
-        name = self.BACKUP if filename is None else filename
-        if os.path.isfile(name):
-            self.model = keras.models.load_model(name)
+    def load(self, filename):
+        if os.path.isfile(filename):
+            self.model = keras.models.load_model(filename)
             return True
         else:
-            logging.error('no such file {}'.format(name))
+            logging.error('no such file {}'.format(filename))
             return False
 
     def remember(self, state, action, reward, next_state, done):
@@ -93,9 +92,10 @@ class DQLAgent(object):
             if done:
                 return returns
 
-            env.ui.setTitle(
+            env.mayAddTitle(
                 'Iter {} ($\epsilon$={:.2f})\nreturn {:.2f}, '.format(
                     self.count, self.epsilon, returns))
+
         return returns
 
     def train(self, env, episodes, minibatch, render=False):

@@ -17,13 +17,18 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, default=0.95)
     parser.add_argument('--crash_value', type=float, default=-3)
     parser.add_argument('--model', type=str)
+    parser.add_argument('--gif', type=str, default='')
     args = parser.parse_args()
 
+    to_gif = args.gif != ''
     env = Environment(
-        num_sensors=args.num_sensors, crash_value=args.crash_value, render=True)
+        num_sensors=args.num_sensors, crash_value=args.crash_value, render=True,
+        to_movie=to_gif)
 
     agent = DQLAgent(
         state_size=args.num_sensors + 1, action_size=len(env.actions),
         gamma=args.gamma)
     if agent.load(args.model):
         agent.run_once(env, train=False, greedy=True)
+        if to_gif:
+            env.ui.toGIF(args.gif)

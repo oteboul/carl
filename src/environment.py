@@ -4,7 +4,8 @@ from src.ui import Interface
 
 
 class Environment(object):
-    def __init__(self, num_sensors=5, render=False, crash_value=0):
+    def __init__(
+            self, num_sensors=5, render=False, crash_value=0, to_movie=False):
 
         # The geometry of the circuit and the position of the car.
         coords = [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)]
@@ -22,9 +23,9 @@ class Environment(object):
             circuit=self.circuit, num_sensors=self.num_sensors)
 
         # To render the environment
-        self.ui = Interface(self.circuit, self.car)
         self.render = render
         if render:
+            self.ui = Interface(self.circuit, self.car, save_frames=to_movie)
             self.ui.show(block=False)
 
         # Build the possible actions of the environment
@@ -75,3 +76,7 @@ class Environment(object):
             self.ui.update()
 
         return state, reward, isEnd
+
+    def mayAddTitle(self, title):
+        if self.render:
+            self.ui.setTitle(title)
