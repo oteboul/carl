@@ -8,19 +8,10 @@ class Environment(object):
             self, num_sensors=5, render=False, crash_value=0, to_movie=False):
 
         # The geometry of the circuit and the position of the car.
+        self.num_sensors = num_sensors
         coords = [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)]
         self.circuit = Circuit(coords, width=0.3)
-
-        self.x0 = 3.0
-        self.y0 = 0.0
-        self.w_car = 0.2
-        self.h_car = 0.4
-        self.theta = 0.0
-        self.speed0 = 0.0
-        self.num_sensors = num_sensors
-        self.car = Car(
-            self.x0, self.y0, self.w_car, self.h_car, self.theta, self.speed0,
-            circuit=self.circuit, num_sensors=self.num_sensors)
+        self.car = Car(self.circuit, num_sensors=self.num_sensors)
 
         # To render the environment
         self.render = render
@@ -52,8 +43,7 @@ class Environment(object):
 
     def reset(self):
         self.count = 0
-        self.car.reset(
-            self.x0, self.y0, self.w_car, self.h_car, self.theta, self.speed0)
+        self.car.reset()
         return self.current_state
 
     @property

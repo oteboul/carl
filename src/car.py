@@ -8,23 +8,23 @@ class Car(object):
     ANGLE_UNIT = np.pi / 16
     SPEED_UNIT = 0.05
 
-    def __init__(
-            self, x, y, w, h, theta, speed=0.0, circuit=None, num_sensors=5):
-        self.reset(x, y, w, h, theta, speed)
+    def __init__(self, circuit, num_sensors=5):
+        self.circuit = circuit
+        self.reset()
+        self.w = circuit.width * 2 / 3
+        self.h = 2 * self.w
         self.computeBox()
+
         self.patch = None
         self.sensor_lines = None
         self.num_sensors = num_sensors
-        self.circuit = circuit
         self.color = '#44dafb'
 
-    def reset(self, x, y, w, h, theta, speed):
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.theta = theta
-        self.speed = speed
+    def reset(self):
+        self.x = self.circuit.start.x
+        self.y = self.circuit.start.y
+        self.theta = 0.0
+        self.speed = 0.0
 
     def action(self, speed=0, theta=0):
         """Change the speed of the car and / or its direction.
@@ -35,9 +35,12 @@ class Car(object):
 
     def move(self):
         """Based on the current speed and position of the car, make it move."""
+        trajectory = [(self.x, self.y)]
         self.x += self.speed * np.cos(self.theta)
         self.y += self.speed * np.sin(self.theta)
         self.computeBox()
+        trajectory.append((self.x, self.y))
+        self.circuit.updateCheckpoints(geom.LineString(trajectory))
 
     def getCoords(self, i, j):
         """From car coordinates to world coordinates, (0, 0) being the center of

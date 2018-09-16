@@ -93,8 +93,8 @@ class DQLAgent(object):
                 return returns
 
             env.mayAddTitle(
-                'Iter {} ($\epsilon$={:.2f})\nreturn {:.2f}, '.format(
-                    self.count, self.epsilon, returns))
+                'Iter {} ($\epsilon$={:.2f})\nlaps {}, return {:.2f}, '.format(
+                    self.count, self.epsilon, env.circuit.laps, returns))
 
         return returns
 
