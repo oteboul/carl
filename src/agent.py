@@ -12,9 +12,9 @@ from keras.optimizers import Adam
 
 class DQLAgent(object):
     def __init__(
-            self, state_size, action_size, max_steps=200,
-            gamma=0.95, epsilon=1.0, epsilon_decay=0.99, learning_rate=0.1,
-            output='weights.h5'):
+            self, state_size=-1, action_size=-1, max_steps=200,
+            gamma=0.95, epsilon=1.0, epsilon_decay=0.99,
+            learning_rate=0.1, output='weights.h5'):
         self.state_size = state_size
         self.action_size = action_size
         self.max_steps = max_steps
@@ -24,7 +24,8 @@ class DQLAgent(object):
         self.epsilon_min = 0.01
         self.epsilon_decay = epsilon_decay
         self.learning_rate = learning_rate
-        self.model = self._build_model()
+        if self.state_size > 0 and self.action_size > 0:
+            self.model = self._build_model()
         self.output = output
         self.count = 0
 
@@ -45,6 +46,8 @@ class DQLAgent(object):
     def load(self, filename):
         if os.path.isfile(filename):
             self.model = keras.models.load_model(filename)
+            self.state_size = self.model.layers[0].input_shape[1]
+            self.action_size = self.model.layers[-1].output.shape[1]
             return True
         else:
             logging.error('no such file {}'.format(filename))

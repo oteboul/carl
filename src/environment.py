@@ -1,17 +1,13 @@
 from src.car import Car
-from src.circuit import Circuit
 from src.ui import Interface
 
 
 class Environment(object):
-    def __init__(
-            self, num_sensors=5, render=False, crash_value=0, to_movie=False):
+    NUM_SENSORS = 5
 
-        # The geometry of the circuit and the position of the car.
-        self.num_sensors = num_sensors
-        coords = [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)]
-        self.circuit = Circuit(coords, width=0.3)
-        self.car = Car(self.circuit, num_sensors=self.num_sensors)
+    def __init__(self, circuit, render=False, crash_value=0, to_movie=False):
+        self.circuit = circuit
+        self.car = Car(self.circuit, num_sensors=self.NUM_SENSORS)
 
         # To render the environment
         self.render = render

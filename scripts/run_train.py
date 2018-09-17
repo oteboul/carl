@@ -6,8 +6,9 @@ python3 -m scripts.run_train
 
 import argparse
 
-from src.environment import Environment
 from src.agent import DQLAgent
+from src.circuit import Circuit
+from src.environment import Environment
 
 
 if __name__ == '__main__':
@@ -25,10 +26,12 @@ if __name__ == '__main__':
     parser.add_argument('--ui', type=str, default='true')
     args = parser.parse_args()
 
+    circuit = Circuit(
+        [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)], width=0.3)
+
     render = args.ui.lower() != 'false'
     env = Environment(
-        num_sensors=args.num_sensors, crash_value=args.crash_value,
-        render=render)
+        circuit=circuit, crash_value=args.crash_value, render=render)
 
     agent = DQLAgent(
         state_size=args.num_sensors + 1, action_size=len(env.actions),
