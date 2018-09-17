@@ -96,14 +96,17 @@ class DQLAgent(object):
                 return returns
 
             env.mayAddTitle(
-                'Iter {} ($\epsilon$={:.2f})\nlaps {}, return {:.2f}, '.format(
-                    self.count, self.epsilon, env.circuit.laps, returns))
+                'Iter {} ($\epsilon$={:.2f})\n{}\ntime {} return {:.2f}, '
+                .format(
+                    self.count, self.epsilon, env.circuit.debug(), num_steps,
+                    returns
+                ))
 
-        return returns
+        return returns, num_steps
 
     def train(self, env, episodes, minibatch, render=False):
         for e in range(episodes):
-            r = self.run_once(env, train=True, greedy=False)
+            r, _ = self.run_once(env, train=True, greedy=False)
             print("episode: {}/{}, return: {}, e: {:.2}".format(
                 e, episodes, r, self.epsilon))
 
@@ -112,6 +115,6 @@ class DQLAgent(object):
                 self.save()
 
         # Finally runs a greedy one
-        r = self.run_once(env, train=False, greedy=True)
+        r, n = self.run_once(env, train=False, greedy=True)
         self.save()
-        print("Greedy return: {}".format(r))
+        print("Greedy return: {} in {} steps".format(r, n))

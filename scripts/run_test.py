@@ -23,9 +23,9 @@ if __name__ == '__main__':
     agent = DQLAgent(gamma=args.gamma, max_steps=args.max_steps)
 
     circuit = Circuit([
-        (-0.5, 0), (0.5, 0.5), (0.5, 1), (0, 2), (2.5, 2.5), (3, 0.5), (4.5, 1.),
-        (6, 0.5), (6, -0.5), (5, -1), (5, -2), (0, -2), (-0.5, -0.5)],
-        width=0.3)
+        (-0.5, 0), (0.5, 0.5), (0.5, 1), (0, 2), (2.5, 2.5), (3, 0.5),
+        (4.5, 1.), (6, 0.5), (6, -0.5), (5, -1), (5, -2), (0, -2), (-0.5, -0.5)
+        ], width=0.3)
 
     to_gif = args.gif != ''
     env = Environment(circuit, render=True, to_movie=to_gif)

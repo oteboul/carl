@@ -4,7 +4,7 @@ from descartes import PolygonPatch
 
 class Circuit(object):
 
-    def __init__(self, points, width):
+    def __init__(self, points, width, num_checkpoints=100):
         self.points = points
         if self.points[0] != self.points[-1]:
             self.points.append(points[0])
@@ -22,7 +22,7 @@ class Circuit(object):
         self.defineStart()
 
         # Define the checkpoints
-        self.makeCheckpoints(n=20)
+        self.makeCheckpoints(n=num_checkpoints)
 
     def defineStart(self):
         """The start line is in the middle of the longest horizontal segment."""
@@ -52,6 +52,7 @@ class Circuit(object):
             ))
         self.checkpoints = [False for i in range(n)]
         self.laps = 0
+        self.lap_progression = 0
 
     def updateCheckpoints(self, obj):
         if not all(self.checkpoints):
@@ -63,6 +64,12 @@ class Circuit(object):
             if self.start_line.intersects(obj):
                 self.checkpoints = [False for i in range(len(self.checklines))]
                 self.laps += 1
+
+        done = len(list(filter(None, self.checkpoints)))
+        self.progression = done / len(self.checkpoints)
+
+    def debug(self):
+        return "laps {}: {:.0f}%".format(self.laps, self.progression * 100)
 
     def __contains__(self, shape):
         return self.dilated.contains(shape)
