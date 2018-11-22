@@ -41,7 +41,12 @@ class Interface(object):
 
     def show(self, block=True):
         plt.ion()
-        plt.show(block=block)
+        if block:
+            plt.show(block=block)
+        else:
+            plt.pause(0.001)
+            plt.show()
+            plt.close()
 
     def setTitle(self, title):
         self.ax.set_title(title)

@@ -26,6 +26,11 @@ class Car(object):
         self.theta = 0.0
         self.speed = 0.0
 
+    def in_circuit(self) -> bool:
+        """returns True if the car is entirely in its circuit, False otherwise.
+        """
+        return self.car in self.circuit
+
     def action(self, speed=0, theta=0):
         """Change the speed of the car and / or its direction.
         Both can be negative."""
