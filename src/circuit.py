@@ -4,7 +4,7 @@ from descartes import PolygonPatch
 
 class Circuit(object):
 
-    def __init__(self, points, width, num_checkpoints=100):
+    def __init__(self, points, width=0.3, num_checkpoints=100):
         self.points = points
         if self.points[0] != self.points[-1]:
             self.points.append(points[0])
@@ -50,9 +50,12 @@ class Circuit(object):
                 self.circuit.exterior.interpolate(step_ext * (n - i)),
                 self.circuit.interiors[0].interpolate(step_int * i)],
             ))
-        self.checkpoints = [False for i in range(n)]
+        self.reset()
+
+    def reset(self):
+        self.checkpoints = [False for i in self.checklines]
         self.laps = 0
-        self.lap_progression = 0
+        self.progression = 0
 
     def updateCheckpoints(self, obj):
         if not all(self.checkpoints):

@@ -26,17 +26,17 @@ class Car(object):
         self.theta = 0.0
         self.speed = 0.0
 
-    def in_circuit(self) -> bool:
-        """returns True if the car is entirely in its circuit, False otherwise.
-        """
-        return self.car in self.circuit
-
     def action(self, speed=0, theta=0):
         """Change the speed of the car and / or its direction.
         Both can be negative."""
         self.speed = max(0.0, self.speed + speed * self.SPEED_UNIT)
         self.theta += theta * self.ANGLE_UNIT
         self.move()
+
+    def in_circuit(self) -> bool:
+        """returns True if the car is entirely in its circuit, False otherwise.
+        """
+        return self.car in self.circuit
 
     def move(self):
         """Based on the current speed and position of the car, make it move."""
@@ -110,6 +110,7 @@ class Car(object):
             self.patch = other
         else:
             self.patch._path._vertices = other._path._vertices
+            self.patch.set_fc(self.color)
 
         # Plot the distances to the circuit
         sensor_lines = []
