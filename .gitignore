@@ -4,3 +4,4 @@ models/
 .vscode/
 .vs/
 legacy/
+.DS_Store
