@@ -40,14 +40,12 @@ class Environment(gym.Env):
         if self.circuit.laps + self.circuit.progression > self.progression:
             reward += (self.circuit.laps + self.circuit.progression - self.progression)
             self.progression = self.circuit.laps + self.circuit.progression
-        # print(reward, self.car.speed/10, self.count/500)
         return reward + self.car.speed/20
 
     def isEnd(self) -> bool:
         """Is the episode over ?"""
         isCrash = self.car.car not in self.circuit
         hasStopped = self.car.speed < self.car.SPEED_UNIT
-        # print(isCrash, hasStopped)
         return isCrash or hasStopped
 
     def reset(self):
