@@ -39,7 +39,6 @@ if __name__ == '__main__':
     increasing_circuits = args.increasing_circuits.lower() == 'true'
     env = Environment(circuit=circuit, render=render)
 
-    print(increasing_circuits)
     agent = DQLAgent(
         state_size=len(env.current_state), action_size=len(env.actions),
         gamma=args.gamma, learning_rate=args.learning_rate, max_steps=args.max_steps)
