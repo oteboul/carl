@@ -1,6 +1,6 @@
 # Self-driving car with Deep-Q Network
 
-![Carl racing](https://github.com/oteboul/carl/tree/master/images/vroum.gif)
+![Carl racing](images/racing.gif)
 
 Start by installing the requirements:
 ```
