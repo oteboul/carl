@@ -1,5 +1,7 @@
 # Self-driving car with Deep-Q Network
 
+![Carl racing](https://github.com/oteboul/carl/tree/master/images/vroum.gif)
+
 Start by installing the requirements:
 ```
 sudo pip3 install -r requirements
