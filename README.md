@@ -1,5 +1,29 @@
-# Carl: Car driven by Reinforcement Learning
+# Self-driving car with Deep-Q Network
 
-![Carl racing](https://media.giphy.com/media/2wTai7sM3kOm8vXkaQ/giphy.gif)
+![Carl racing](https://github.com/oteboul/carl/tree/master/images/vroum.gif)
 
-python3 -m scripts.run_train --num_episodes=10000 --epsilon_decay=0.9996 --learning_rate=0.001 --crash_value=-3 --ui=true --output='carl.h5'
+Start by installing the requirements:
+```
+sudo pip3 install -r requirements
+```
+
+Then you must implement in:
+
+1. environment.py:
+  - rewards
+  - end of the episode.
+2. agent.py
+  - an update scheme for epsilon
+  - The epsilon-greedy policy itself
+  - The neural network mapping states to values Q(s, a)
+
+
+To train your reinforcement learning agent with some parameters:
+```
+python3 -m scripts.run_train --num_episodes=X --output='my_weights.h5'
+```
+
+To test your trained agent in a greedy way (saved in the .h5 file):
+```
+python3 -m scripts.run_test --model='my_weights.h5'
+```
