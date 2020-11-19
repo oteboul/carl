@@ -1,21 +1,11 @@
-from src.car import Car
-from src.ui import Interface
-from src.circuit import Circuit
+from carl.car import Car
+from carl.ui import Interface
+from carl.circuit import Circuit, generateCircuitPoints
 import numpy as np
+import gym
 
-def generateCircuitPoints(n_points=16, difficulty=0, circuit_size=(5, 2)):
-    n_points = min(25, n_points)
-    angles = [-np.pi/4 + 2*np.pi*k/n_points for k in range(3*n_points//4)]
-    points = [(circuit_size[0]/2, 0.5), (3*circuit_size[0]/2, 0.5)]
-    points += [(circuit_size[0]*(1+np.cos(angle)), circuit_size[1]*(1+np.sin(angle))) for angle in angles]
-    for i, angle in zip(range(n_points), angles):
-        rd_dist = 0
-        if difficulty > 0:
-            rd_dist = min(circuit_size) * np.random.vonmises(mu=0, kappa=32/difficulty)/np.pi
-        points[i+2] = tuple(np.array(points[i+2]) + rd_dist*np.array([np.cos(angle), np.sin(angle)]))
-    return points
 
-class Environment(object):
+class Environment(gym.Env):
     NUM_SENSORS = 5
 
     def __init__(self, circuit, render=False):
@@ -85,7 +75,7 @@ class Environment(object):
         if self.render:
             self.ui.update()
 
-        return state, reward, isEnd
+        return state, reward, isEnd, {}
 
     def mayAddTitle(self, title):
         if self.render:

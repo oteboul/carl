@@ -4,11 +4,11 @@ To train a DQL Agent to drive a car, from the carl/ directory run
 python3 -m scripts.run_train
 """
 
-import argparse
+import argparse, os
 
-from src.agent import DQLAgent
-from src.circuit import Circuit
-from src.environment import Environment
+from carl.agent import DQLAgent
+from carl.circuit import Circuit
+from carl.environment import Environment
 
 
 if __name__ == '__main__':
@@ -46,4 +46,4 @@ if __name__ == '__main__':
 
     agent.train(
         env, episodes=args.num_episodes, minibatch=args.minibatch_size,
-        output=args.output, rendering_period=args.rendering_period, increasing_circuits=increasing_circuits)
+        output=os.path.join('models', args.output), rendering_period=args.rendering_period, increasing_circuits=increasing_circuits)
