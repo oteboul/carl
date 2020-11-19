@@ -4,9 +4,9 @@ To run the UI mode, from the carl/ directory run
 python3 -m scripts.run_ui
 """
 
-from src.car import Car
-from src.circuit import Circuit
-from src.ui import Interface
+from carl.car import Car
+from carl.circuit import Circuit
+from carl.ui import Interface
 
 
 if __name__ == '__main__':

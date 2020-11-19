@@ -1,5 +1,4 @@
 import logging
-import keras.models
 import os
 import random
 import numpy as np
@@ -7,12 +6,12 @@ import time
 
 import collections
 from collections import deque
-from keras.models import Sequential
-from keras.optimizers import Adam
-from keras.layers import Dense, LeakyReLU, BatchNormalization, Softmax, Dropout, Activation
-from keras.regularizers import l2
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Softmax, Dropout, Activation
+from tensorflow.keras.regularizers import l2
 from copy import copy
-import keras.backend as K
+import tensorflow.keras.backend as K
 
 
 class DQLAgent(object):
@@ -57,7 +56,7 @@ class DQLAgent(object):
 
     def load(self, filename):
         if os.path.isfile(filename):
-            self.model = keras.models.load_model(filename)
+            self.model = load_model(filename)
             # self.model.summary()
             self.state_size = self.model.layers[0].input_shape[1]
             self.action_size = self.model.layers[-1].output.shape[1]
@@ -122,7 +121,7 @@ class DQLAgent(object):
         while num_steps < self.max_steps:
             num_steps += 1
             action = self.act(state, greedy=greedy)
-            next_state, reward, done = env.step(action, greedy)
+            next_state, reward, done, _ = env.step(action, greedy)
             next_state = np.reshape(next_state, [1, self.state_size])
 
             if train:

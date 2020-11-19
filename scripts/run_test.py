@@ -8,9 +8,9 @@ import argparse
 import os.path
 import numpy as np
 
-from src.agent import DQLAgent
-from src.circuit import Circuit
-from src.environment import Environment
+from carl.agent import DQLAgent
+from carl.circuit import Circuit
+from carl.environment import Environment
 
 def generateCircuitPoints(n_points=16, difficulty=0, circuit_size=(5, 2)):
     n_points = min(25, n_points)
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--max_steps', type=int, default=1000)
     parser.add_argument('--gamma', type=float, default=1.0)
-    parser.add_argument('--model', type=str, default='weights.h5')
+    parser.add_argument('--model', type=str, default=os.path.join('models', 'weights.h5'))
     args = parser.parse_args()
 
     agent = DQLAgent(gamma=args.gamma, max_steps=args.max_steps)

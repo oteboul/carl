@@ -4,8 +4,8 @@ import logging
 import os.path
 import random
 
-from src.agent import DQLAgent
-from src.environment import Environment
+from carl.agent import DQLAgent
+from carl.environment import Environment
 
 
 class TournamentEnvironment(Environment):

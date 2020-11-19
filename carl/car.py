@@ -110,7 +110,7 @@ class Car(object):
             self.patch = other
         else:
             self.patch._path._vertices = other._path._vertices
-            self.patch.set_fc(self.color)
+            self.patch.set_facecolor(self.color)
 
         # Plot the distances to the circuit
         sensor_lines = []

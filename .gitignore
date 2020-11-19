@@ -1,7 +1,9 @@
 **/__pycache__/
-venv/
+venv*
+.env*
 models/
 .vscode/
 .vs/
 legacy/
 .DS_Store
+main.py

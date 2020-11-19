@@ -1,21 +1,11 @@
-from src.car import Car
-from src.ui import Interface
-from src.circuit import Circuit
+from carl.car import Car
+from carl.ui import Interface
+from carl.circuit import Circuit, generateCircuitPoints
 import numpy as np
+import gym
 
-def generateCircuitPoints(n_points=16, difficulty=0, circuit_size=(5, 2)):
-    n_points = min(25, n_points)
-    angles = [-np.pi/4 + 2*np.pi*k/n_points for k in range(3*n_points//4)]
-    points = [(circuit_size[0]/2, 0.5), (3*circuit_size[0]/2, 0.5)]
-    points += [(circuit_size[0]*(1+np.cos(angle)), circuit_size[1]*(1+np.sin(angle))) for angle in angles]
-    for i, angle in zip(range(n_points), angles):
-        rd_dist = 0
-        if difficulty > 0:
-            rd_dist = min(circuit_size) * np.random.vonmises(mu=0, kappa=32/difficulty)/np.pi
-        points[i+2] = tuple(np.array(points[i+2]) + rd_dist*np.array([np.cos(angle), np.sin(angle)]))
-    return points
 
-class Environment(object):
+class Environment(gym.Env):
     NUM_SENSORS = 5
 
     def __init__(self, circuit, render=False):
@@ -23,18 +13,19 @@ class Environment(object):
         self.car = Car(self.circuit, num_sensors=self.NUM_SENSORS)
 
         # To render the environment
-        self.render = render
-        if render:
-            self.ui = Interface(self.circuit, self.car)
-            self.ui.show(block=False)
-        else:
-            self.ui = None
+        self.render_init = False
+        self.render_ui = render
+        if self.render_ui:
+            self.initRender(self.circuit, self.car)
 
         # Build the possible actions of the environment
         self.actions = []
         for turn_step in range(-2, 3, 1):
             for speed_step in range(-1, 2, 1):
                 self.actions.append((speed_step, turn_step))
+
+        self.action_space = gym.spaces.Discrete(len(self.actions))
+        self.observation_space = gym.spaces.Box(0, 1, (self.NUM_SENSORS,))
 
         self.count = 0
         self.progression = 0
@@ -72,7 +63,7 @@ class Environment(object):
         result.append(self.car.speed)
         return result
 
-    def step(self, i: int, greedy):
+    def step(self, i: int):
         """Takes action i and returns the new state, the reward and if we have
         reached the end"""
         self.count += 1
@@ -82,13 +73,14 @@ class Environment(object):
         isEnd = self.isEnd()
         reward = self.reward()
 
-        if self.render:
+        if self.render_ui:
             self.ui.update()
+            self.render_ui = False
 
-        return state, reward, isEnd
+        return state, reward, isEnd, {}
 
     def mayAddTitle(self, title):
-        if self.render:
+        if self.render_ui:
             self.ui.setTitle(title)
         
     def getNewCircuit(self, n_points=16, difficulty=0):
@@ -98,17 +90,18 @@ class Environment(object):
         self.car = Car(self.circuit, num_sensors=self.NUM_SENSORS)
         self.car.reset()
         self.circuit.reset()
-        if self.render:
+        if self.render_ui:
             self.ui = Interface(self.circuit, self.car)
             self.ui.show(block=False)
+
+    def render(self):
+        self.render_ui = True
+        if not self.render_init:
+            self.initRender(self.circuit, self.car)
     
-    def initRender(self):
-        self.render = True
-        self.circuit = Circuit(self.circuit.points)
-        self.car = Car(self.circuit, num_sensors=self.NUM_SENSORS)
-        self.car.reset()
-        self.circuit.reset()
-        if self.render:
-            self.ui = Interface(self.circuit, self.car)
+    def initRender(self, circuit, car):
+        self.render_init = True
+        if self.render_ui:
+            self.ui = Interface(circuit, car)
             self.ui.show(block=False)
 

@@ -6,8 +6,8 @@ python3 -m scripts.run_tournament
 import numpy as np
 import argparse
 
-from src.circuit import Circuit
-from src.tournament import TournamentEnvironment, Tournament
+from carl.circuit import Circuit
+from carl.tournament import TournamentEnvironment, Tournament
 
 
 if __name__ == '__main__':
