@@ -23,7 +23,6 @@ class Cars(object):
             (ones, -ones),
         )
 
-
         self.reset()
         self.reset_render()
 
@@ -128,13 +127,14 @@ class Cars(object):
             intersections = self.intersection(i, phi)
             distance = np.sqrt(np.sum(np.square(intersections - origin), axis=-1))
             distances.append(distance)
+        return np.stack(distances, axis=-1)
+    
+    def step(self):
         for car_id, car in enumerate(self.cars):
             self.in_circuit[car_id] = car in self.circuit
-        return np.stack(distances, axis=-1)
 
     def update_plot(self, ax):
         # Plot the car
-        origins = self.coords(1, 0)
         for car_id, car in enumerate(self.cars):
             if not self.render_locked[car_id]:
                 other = PolygonPatch(car, fc=self.colors[car_id], ec='black', alpha=1.0, zorder=4)
@@ -176,4 +176,4 @@ class Cars(object):
 
     @property
     def crashed(self):
-        return np.logical_or(np.logical_not(self.in_circuit), self.speeds < self.SPEED_UNIT)
+        return np.logical_or(np.logical_not(self.in_circuit), self.speeds < self.SPEED_UNIT / 10)

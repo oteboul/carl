@@ -7,6 +7,9 @@ class Circuit(object):
     def __init__(self, points, n_cars, width=0.3, num_checkpoints=100):
         self.n_cars = n_cars
 
+        if isinstance(points, np.ndarray):
+            points = points.tolist()
+
         self.points = points
         if self.points[0] != self.points[-1]:
             self.points.append(points[0])
@@ -194,4 +197,4 @@ def generate_circuit(n_points=16, difficulty=0, circuit_size=(5, 2)):
         if difficulty > 0:
             rd_dist = min(circuit_size) * np.random.vonmises(mu=0, kappa=32/difficulty)/np.pi
         points[i+2] = tuple(np.array(points[i+2]) + rd_dist*np.array([np.cos(angle), np.sin(angle)]))
-    return points
+    return np.array(points) - np.array([5, .6])

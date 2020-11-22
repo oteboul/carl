@@ -84,8 +84,10 @@ class Environment(gym.Env):
         self.time += 1
 
         if self.action_type == 'discrete':
-            actions = [self.actions[action_id] for action_id in actions]   
-        self.cars.action(np.array(actions))
+            actions = [self.actions[action_id] for action_id in actions]
+        actions = np.array(actions)
+        self.cars.action(actions)
+        self.cars.step()
 
         done = self.done
         reward = self.reward
@@ -104,7 +106,6 @@ class Environment(gym.Env):
     def reward(self) -> float:
         """Computes the reward at the present moment"""
         reward = 0.0
-        car = self.cars.cars[0]
         crashed = self.cars.crashed[0]
         if crashed:
             reward -= 0.5
