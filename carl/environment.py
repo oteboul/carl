@@ -74,7 +74,7 @@ class Environment(gym.Env):
 
     @property
     def current_state(self):
-        return np.concatenate((self.cars.distances, np.expand_dims(self.cars.speeds, -1)), axis=-1).astype(np.float32)
+        return np.concatenate((self.cars.distances, np.expand_dims(self.cars.speeds, -1) / (10 * self.cars.SPEED_UNIT)), axis=-1).astype(np.float32)
 
     def step(self, actions):
         """Takes action i and returns the new state, the reward and if we have
