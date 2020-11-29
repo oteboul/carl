@@ -7,3 +7,5 @@ models/
 legacy/
 .DS_Store
 main.py
+wandb
+logs
