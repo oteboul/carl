@@ -59,21 +59,14 @@ class Environment(gym.Env):
         self.cars.reset()
         self.circuit.reset()
 
-        if not self.render_ui and self.render_init:
-            # plt.close('all')
+        if self.render_init:
             self.cars.reset_render()
             self.circuit.reset_render()
-            # self.render_init = False
 
         if self.n_cars > 1:
             return self.current_state
         else:
             return self.current_state[0]
-
-    @staticmethod
-    def makeColor(h):
-        return "#{:02x}{:02x}{:02x}".format(
-            *map(lambda x: int(255*x), colorsys.hsv_to_rgb(h, 0.8, 0.8)))
 
     @property
     def current_state(self):
@@ -124,7 +117,7 @@ class Environment(gym.Env):
         """Is the episode over ?"""
         return np.all(np.logical_or(self.cars.crashed, self.circuit.laps >= 2))
 
-    def render(self):
+    def render(self, render_mode="human"):
         self.render_ui = True
         if not self.render_init:
             self.init_render()
