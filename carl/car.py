@@ -9,8 +9,7 @@ class Cars(object):
     ANGLE_UNIT = np.pi / 16
     SPEED_UNIT = 0.02
 
-    def __init__(self, circuit, n_cars=1, num_sensors=5,
-                       names='noname', colors='#44dafb', render_sensors=True):
+    def __init__(self, circuit, n_cars=1, num_sensors=5, names=None, colors='#44dafb', render_sensors=True):
         self.circuit = circuit
         self.n_cars = n_cars
         self.num_sensors = num_sensors
@@ -24,23 +23,19 @@ class Cars(object):
         )
 
         self.reset()
-        self.reset_render()
-
         self.w = 0.2
         self.h = 2 * self.w
         self.compute_box()
+        self.reset_render()
 
         if isinstance(colors, str):
             self.colors = np.full((self.n_cars,), colors)
         else:
             self.colors = colors
 
-        if isinstance(names, str):
-            self.names = np.full((self.n_cars,), names)
-        else:
-            self.names = names
-
+        self.names = np.full((self.n_cars,), 'noname') if names is None else names
         self.render_sensors = render_sensors
+
 
     def reset(self):
         self.xs = np.array([self.circuit.start.x for _ in range(self.n_cars)])
@@ -49,12 +44,19 @@ class Cars(object):
         self.speeds = np.array([0. for _ in range(self.n_cars)])
         self.in_circuit = np.ones(self.n_cars, dtype=np.bool)
         self.render_locked = np.zeros(self.n_cars, np.bool)
+        self.sensor_lines_data = np.zeros((self.n_cars, self.num_sensors, 2, 2))
         self.time = 0
     
-    def reset_render(self):
-        self.patch = [None for _ in range(self.n_cars)]
-        self.sensor_lines = [None for _ in range(self.n_cars)]
-        self.sensor_lines_data = np.zeros((self.n_cars, self.num_sensors, 2, 2))
+    def reset_render(self, ax=None):
+        if hasattr(self, 'patch'):
+            for patch in getattr(self, 'patch'):
+                patch.set_alpha(0)
+            for sensor_lines in getattr(self, 'sensor_lines'):
+                for line in sensor_lines:
+                    line.set_alpha(0)
+        else:
+            self.patch = [None for _ in range(self.n_cars)]
+            self.sensor_lines = [None for _ in range(self.n_cars)]
 
     def action(self, actions):
         """Change the speed of the car and / or its direction.
@@ -163,6 +165,7 @@ class Cars(object):
                     else:
                         for k, (curr_x, curr_y) in enumerate(sensor_lines):
                             line = self.sensor_lines[car_id][k]
+                            line.set_alpha(1)
                             line.set_xdata(curr_x)
                             line.set_ydata(curr_y)
 

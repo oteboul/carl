@@ -11,20 +11,23 @@ import colorsys
 class Environment(gym.Env):
     NUM_SENSORS = 5
 
-    def __init__(self, circuit_points, n_cars=1, render=False, action_type='discrete', render_sensors=None):
-        self.n_cars = n_cars
+    def __init__(self, circuit, n_cars=1, action_type='discrete', render_sensors=None):
         self.render_sensors = render_sensors if render_sensors else n_cars < 6
 
-        self.circuit = Circuit(circuit_points, n_cars=self.n_cars)
+        if isinstance(circuit, Circuit):
+            self.n_cars = circuit.n_cars
+            self.circuit = circuit
+        else:
+            self.n_cars = n_cars
+            self.circuit = Circuit(circuit, n_cars=self.n_cars)
+        
         self.cars = Cars(self.circuit,
                          n_cars=self.n_cars,
                          num_sensors=self.NUM_SENSORS,
                          render_sensors=self.render_sensors)
 
-        self.render_ui = render
+        self.render_ui = False
         self.render_init = False
-        if render:
-            self.init_render()
 
         # Build individual action space
         self.action_type = action_type
@@ -56,11 +59,11 @@ class Environment(gym.Env):
         self.cars.reset()
         self.circuit.reset()
 
-        if not self.render_ui:
-            plt.close('all')
+        if not self.render_ui and self.render_init:
+            # plt.close('all')
             self.cars.reset_render()
             self.circuit.reset_render()
-            self.render_init = False
+            # self.render_init = False
 
         if self.n_cars > 1:
             return self.current_state
@@ -74,7 +77,8 @@ class Environment(gym.Env):
 
     @property
     def current_state(self):
-        return np.concatenate((self.cars.distances, np.expand_dims(self.cars.speeds, -1) / (10 * self.cars.SPEED_UNIT)), axis=-1).astype(np.float32)
+        normalized_speeds = np.expand_dims(self.cars.speeds, -1) / (10 * self.cars.SPEED_UNIT)
+        return np.concatenate((self.cars.distances, normalized_speeds), axis=-1).astype(np.float32)
 
     def step(self, actions):
         """Takes action i and returns the new state, the reward and if we have

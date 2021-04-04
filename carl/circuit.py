@@ -69,7 +69,8 @@ class Circuit(object):
         self.half_chicken_dinner = False
         
     def reset_render(self):
-        self.texts = [None for _ in range(self.n_cars)]
+        if not hasattr(self, 'texts'):
+            self.texts = [None for _ in range(self.n_cars)]
         for text in [text for text in self.texts if text]:
             text.set_text('')
             text.set_color('black')
@@ -127,11 +128,10 @@ class Circuit(object):
         ax.set_aspect(1)
 
     def update_plot(self, ax, cars):
-
         crashed = cars.render_locked
         names = cars.names
         prog_total = self.progression + self.laps
-        ranks = np.argsort(prog_total)
+        ranks = np.argsort(-prog_total)
 
         for k, car_id in enumerate(ranks):
             progress = self.progression[car_id]
@@ -158,14 +158,17 @@ class Circuit(object):
             if len(rank_text) < 3:
                 rank_text += ' '
             
+            if len(ranks) == 1:
+                rank_text = ''
+            
             text = f'{rank_text} {name} - Lap {lap+1} - {progress:2.0%} - {car_id}'
-            pos = 2.8 - 3.2 * (rank/self.n_cars)
+            pos = -.8 + 3.2 * (rank/self.n_cars)
             if self.texts[car_id] is None:
-                self.texts[car_id] = ax.text(6.5, pos, text, fontname='Lucida Console')
+                self.texts[car_id] = ax.text(6.2, pos, text, fontname='Lucida Console')
             else:
                 self.texts[car_id].set_text(text)
                 if lap < 2:
-                    self.texts[car_id].set_position((6.5, pos))
+                    self.texts[car_id].set_position((6.2, pos))
             if lap > 1:
                 self.texts[car_id].set_color('y')
                 if not self.half_chicken_dinner:

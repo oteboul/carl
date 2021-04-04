@@ -21,7 +21,6 @@ class Interface(object):
         self.circuit.plot(self.ax)
         self.cars.plot(self.ax)
 
-
     def show(self, block=True):
         plt.ion()
         plt.show(block=block)
