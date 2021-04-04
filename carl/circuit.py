@@ -67,13 +67,17 @@ class Circuit(object):
 
         self.chicken_dinner = False
         self.half_chicken_dinner = False
-        
+
     def reset_render(self):
         if not hasattr(self, 'texts'):
             self.texts = [None for _ in range(self.n_cars)]
-        for text in [text for text in self.texts if text]:
-            text.set_text('')
-            text.set_color('black')
+        else:
+            for text in self.texts:
+                text.set_text('')
+                text.set_color('black')
+
+                bbox = dict(facecolor='none', edgecolor='none', boxstyle='round,pad=1')
+                text.set_bbox(bbox)
 
     def update_checkpoints(self, start, stop):
         x_start, y_start = start
@@ -108,30 +112,35 @@ class Circuit(object):
             ax.plot(
                 self.line.xy[0], self.line.xy[1],
                 color='white', linewidth=3, solid_capstyle='round', zorder=3,
-                linestyle='--')
+                linestyle='--'
+            )
 
         ax.plot(
             self.start_line.xy[0], self.start_line.xy[1],
-            color='black', linewidth=3, linestyle='-', zorder=3)
+            color='black', linewidth=3, linestyle='-', zorder=3
+        )
 
         patch = PolygonPatch(
-            self.circuit, fc=color, ec='black', alpha=0.5, zorder=2)
+            self.circuit, fc=color, ec='black', alpha=0.5, zorder=2
+        )
         ax.add_patch(patch)
 
-        ax.text(6.8, 2.82, 'SCOREBOARD', fontname='Lucida Console', fontsize=20)
+        offset_x = (self.circuit.bounds[2] - self.circuit.bounds[0]) * 0.35
+        offset_y = (self.circuit.bounds[3] - self.circuit.bounds[1]) * 0.2
 
-        bounds = self.circuit.bounds
-        offset_x = (bounds[2] - bounds[0]) * 0.1
-        offset_y = (bounds[3] - bounds[1]) * 0.1
-        ax.set_xlim(bounds[0] - offset_x, bounds[2] + offset_x)
-        ax.set_ylim(bounds[1] - offset_y, bounds[3] + offset_y)
+        self.x_min, self.x_max = self.circuit.bounds[0], self.circuit.bounds[2] + offset_x
+        self.y_min, self.y_max = self.circuit.bounds[1], self.circuit.bounds[3] + offset_y
+        ax.text(self.x_max, self.y_max, 'SCOREBOARD',
+            fontname='Lucida Console', fontsize=20, ha='right', va='top')
+        ax.set_xlim(self.x_min, self.x_max)
+        ax.set_ylim(self.y_min, self.y_max)
         ax.set_aspect(1)
 
     def update_plot(self, ax, cars):
         crashed = cars.render_locked
         names = cars.names
         prog_total = self.progression + self.laps
-        ranks = np.argsort(-prog_total)
+        ranks = np.argsort(prog_total)
 
         for k, car_id in enumerate(ranks):
             progress = self.progression[car_id]
@@ -154,37 +163,44 @@ class Circuit(object):
                 rank_text = '3rd'
             else:
                 rank_text = f'{rank}e'
-            
+
             if len(rank_text) < 3:
                 rank_text += ' '
-            
+
             if len(ranks) == 1:
                 rank_text = ''
-            
+
             text = f'{rank_text} {name} - Lap {lap+1} - {progress:2.0%} - {car_id}'
-            pos = -.8 + 3.2 * (rank/self.n_cars)
+            x_text_pos = self.x_max
+            y_text_pos = self.y_min + self.circuit.bounds[3] *  (1 - (rank-1)/self.n_cars)
+
             if self.texts[car_id] is None:
-                self.texts[car_id] = ax.text(6.2, pos, text, fontname='Lucida Console')
+                self.texts[car_id] = ax.text(x_text_pos, y_text_pos, text,
+                    fontname='Lucida Console', ha='right')
             else:
                 self.texts[car_id].set_text(text)
                 if lap < 2:
-                    self.texts[car_id].set_position((6.2, pos))
+                    self.texts[car_id].set_position((x_text_pos, y_text_pos))
+                    self.texts[car_id].set_color(cars.colors[car_id])
             if lap > 1:
-                self.texts[car_id].set_color('y')
+                bbox = dict(facecolor=(1, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
+                self.texts[car_id].set_bbox(bbox)
                 if not self.half_chicken_dinner:
                     ax.set_title(f'{true_name} is on fire !',
                                  fontname='Lucida Console',
                                  fontsize=32)
                     self.half_chicken_dinner = True
             if lap >= 2:
-                self.texts[car_id].set_color('g')
+                bbox = dict(facecolor=(0, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
+                self.texts[car_id].set_bbox(bbox)
                 if not self.chicken_dinner:
                     ax.set_title(f'A winner is {true_name} ({car_id})!',
                                  fontname='Lucida Console',
                                  fontsize=32)
                     self.chicken_dinner = True
             if crashed[car_id]:
-                self.texts[car_id].set_color('r')
+                bbox = dict(facecolor=(1, 0, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
+                self.texts[car_id].set_bbox(bbox)
         if not self.chicken_dinner:
             ax.set_title(f'Let the best AI win !',
                             fontname='Lucida Console',
