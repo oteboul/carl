@@ -3,13 +3,14 @@ import shapely.geometry as geom
 from descartes import PolygonPatch
 from copy import deepcopy
 
+from carl.utils import make_color
 
 class Cars(object):
 
     ANGLE_UNIT = np.pi / 16
     SPEED_UNIT = 0.02
 
-    def __init__(self, circuit, n_cars=1, num_sensors=5, names=None, colors='#44dafb', render_sensors=True):
+    def __init__(self, circuit, n_cars=1, num_sensors=5, names=None, colors=None, render_sensors=True):
         self.circuit = circuit
         self.n_cars = n_cars
         self.num_sensors = num_sensors
@@ -28,14 +29,23 @@ class Cars(object):
         self.compute_box()
         self.reset_render()
 
-        if isinstance(colors, str):
-            self.colors = np.full((self.n_cars,), colors)
+        if colors is None:
+            self.colors = np.array([
+                make_color(np.random.random())
+                for _ in range(self.n_cars)
+            ])
         else:
             self.colors = colors
 
-        self.names = np.full((self.n_cars,), 'noname') if names is None else names
-        self.render_sensors = render_sensors
+        if names is None:
+            self.names = np.array([
+                f'Car n°{i}'
+                for i in range(self.n_cars)
+            ])
+        else:
+            self.names = names
 
+        self.render_sensors = render_sensors
 
     def reset(self):
         self.xs = np.array([self.circuit.start.x for _ in range(self.n_cars)])
