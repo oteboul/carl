@@ -38,6 +38,7 @@ class ScoreCallback(Callback):
 
     def on_episode_begin(self, step, logs):
         self.step = 0
+        self.score = np.zeros(self.playground.env.n_cars)
 
     def on_episode_end(self, episode, logs):
         env = self.playground.env   
@@ -47,7 +48,12 @@ class ScoreCallback(Callback):
         crashed = env.cars.crashed
 
         bonus = max(0, (2 - self.step / 200))
-        score = np.where(crashed, progressions, 2 + bonus)
+        self.score += np.where(crashed, progressions, 2 + bonus)
+    
+    def on_run_end(self, logs):
+        score = self.score
+        if len(score) == 1:
+            score = score[0]
         print(f"score:{score}")
 
 circuits = [
