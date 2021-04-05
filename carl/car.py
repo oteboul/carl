@@ -11,7 +11,6 @@ class Cars(object):
     SPEED_UNIT = 0.02
 
     def __init__(self, circuit, n_cars=1, num_sensors=5, names=None, colors=None, render_sensors=True):
-        self.circuit = circuit
         self.n_cars = n_cars
         self.num_sensors = num_sensors
 
@@ -23,7 +22,8 @@ class Cars(object):
             (ones, -ones),
         )
 
-        self.reset()
+        start = circuit.start.x, circuit.start.y
+        self.reset(start)
         self.w = 0.2
         self.h = 2 * self.w
         self.compute_box()
@@ -39,7 +39,7 @@ class Cars(object):
 
         if names is None:
             self.names = np.array([
-                f'Car n°{i}'
+                f'Car n°{i+1}'
                 for i in range(self.n_cars)
             ])
         else:
@@ -47,9 +47,9 @@ class Cars(object):
 
         self.render_sensors = render_sensors
 
-    def reset(self):
-        self.xs = np.array([self.circuit.start.x for _ in range(self.n_cars)])
-        self.ys = np.array([self.circuit.start.y for _ in range(self.n_cars)])
+    def reset(self, start_coords):
+        self.xs = np.array([start_coords[0] for _ in range(self.n_cars)])
+        self.ys = np.array([start_coords[1] for _ in range(self.n_cars)])
         self.thetas = np.array([0. for _ in range(self.n_cars)])
         self.speeds = np.array([0. for _ in range(self.n_cars)])
         self.in_circuit = np.ones(self.n_cars, dtype=np.bool)
@@ -68,7 +68,7 @@ class Cars(object):
             self.patch = [None for _ in range(self.n_cars)]
             self.sensor_lines = [None for _ in range(self.n_cars)]
 
-    def action(self, actions):
+    def action(self, actions, circuit):
         """Change the speed of the car and / or its direction.
         Both can be negative."""
         speeds = actions[:, 0]
@@ -76,16 +76,20 @@ class Cars(object):
 
         self.speeds = np.maximum(0.0, self.speeds + speeds * self.SPEED_UNIT)
         self.thetas += self.in_circuit * thetas * self.ANGLE_UNIT
+
+        start = deepcopy((self.xs, self.ys))
         self.move()
+        stop = (self.xs, self.ys)
+        circuit.update_checkpoints(start, stop)
+
+        for car_id, car in enumerate(self.cars):
+            self.in_circuit[car_id] = car in circuit
 
     def move(self):
         """Based on the current speed and position of the car, make it move."""
-        start = deepcopy((self.xs, self.ys))
         self.xs += self.in_circuit * self.speeds * np.cos(self.thetas)
         self.ys += self.in_circuit * self.speeds * np.sin(self.thetas)
         self.compute_box()
-        stop = (self.xs, self.ys)
-        self.circuit.update_checkpoints(start, stop)
 
     def coords(self, i, j):
         """From car coordinates to world coordinates, (0, 0) being the center of
@@ -100,7 +104,7 @@ class Cars(object):
         points = np.stack([self.coords(i, j) for i, j in self.anchors], axis=-2)
         self.cars = [geom.Polygon(points[k]) for k in range(self.n_cars)]
 
-    def intersection(self, i, phi):
+    def intersection(self, i, phi, circuit):
         """Computes the intersection coords between the front of the car and
         the border of the circuit in the direction phi."""
         intersections = []
@@ -113,11 +117,11 @@ class Cars(object):
             # Compute intersection with circuit that lies inside the circuit
             origin = geom.Point(org)
             try:
-                p = line.intersection(self.circuit.circuit)
+                p = line.intersection(circuit.circuit)
                 end = p if isinstance(p, geom.LineString) else p[0]
                 end = end.boundary[1]
                 seg = geom.LineString([origin, end])
-                if seg not in self.circuit:
+                if seg not in circuit:
                     intersections.append(origin.xy)
                 else:
                     intersections.append(end.xy)
@@ -131,19 +135,14 @@ class Cars(object):
     def angles(self):
         return [-np.pi / 2 + i * np.pi / (self.num_sensors - 1) for i in range(self.num_sensors)]
 
-    @property
-    def distances(self):
+    def get_distances(self, circuit):
         distances = []
         origin = np.array([1, 0])
         for i, phi in enumerate(self.angles):
-            intersections = self.intersection(i, phi)
+            intersections = self.intersection(i, phi, circuit)
             distance = np.sqrt(np.sum(np.square(intersections - origin), axis=-1))
             distances.append(distance)
         return np.stack(distances, axis=-1)
-    
-    def step(self):
-        for car_id, car in enumerate(self.cars):
-            self.in_circuit[car_id] = car in self.circuit
 
     def update_plot(self, ax):
         # Plot the car

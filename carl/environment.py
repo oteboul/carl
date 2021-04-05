@@ -11,20 +11,28 @@ import colorsys
 class Environment(gym.Env):
     NUM_SENSORS = 5
 
-    def __init__(self, circuit, n_cars=1, action_type='discrete', render_sensors=None):
+    def __init__(self, circuits, n_cars=1, action_type='discrete', render_sensors=None):
         self.render_sensors = render_sensors if render_sensors else n_cars < 6
 
-        if isinstance(circuit, Circuit):
-            self.n_cars = circuit.n_cars
-            self.circuit = circuit
-        else:
-            self.n_cars = n_cars
-            self.circuit = Circuit(circuit, n_cars=self.n_cars)
+        if isinstance(circuits, Circuit) or isinstance(circuits[0][0], (int, float)):
+            circuits = [circuits]
+
+        self.circuits = circuits
+        for i, circuit in enumerate(self.circuits):
+            if isinstance(circuit, Circuit):
+                self.n_cars = circuit.n_cars
+                self.circuits[i] = circuit
+            else:
+                self.n_cars = n_cars
+                self.circuits[i] = Circuit(circuit, n_cars=self.n_cars)
         
-        self.cars = Cars(self.circuit,
-                         n_cars=self.n_cars,
-                         num_sensors=self.NUM_SENSORS,
-                         render_sensors=self.render_sensors)
+        self.current_circuit_id = -1
+        self.cars = Cars(
+            self.circuits[self.current_circuit_id],
+            n_cars=self.n_cars,
+            num_sensors=self.NUM_SENSORS,
+            render_sensors=self.render_sensors
+        )
 
         self.render_ui = False
         self.render_init = False
@@ -46,22 +54,34 @@ class Environment(gym.Env):
 
         self.time = 0
         self.progression = np.array([0 for _ in range(self.n_cars)])
+
+    @property
+    def current_circuit(self):
+        return self.circuits[self.current_circuit_id % len(self.circuits)]
     
     def init_render(self):
         self.render_init = True
         if self.render_ui:
-            self.ui = Interface(self.circuit, self.cars)
+            self.ui = Interface()
+            self.ui.plot(self.cars, self.current_circuit)
             self.ui.show(block=False)
 
     def reset(self):
         self.time = 0
         self.progression = np.array([0 for _ in range(self.n_cars)])
-        self.cars.reset()
-        self.circuit.reset()
+
+        if self.render_init:
+            self.current_circuit.remove_plot(self.ui.ax)
+
+        self.current_circuit_id += 1
+        circuit = self.current_circuit
+
+        start = circuit.start.x , circuit.start.y
+        self.cars.reset(start)
 
         if self.render_init:
             self.cars.reset_render()
-            self.circuit.reset_render()
+            circuit.plot(self.ui.ax)
 
         if self.n_cars > 1:
             return self.current_state
@@ -71,7 +91,8 @@ class Environment(gym.Env):
     @property
     def current_state(self):
         normalized_speeds = np.expand_dims(self.cars.speeds, -1) / (10 * self.cars.SPEED_UNIT)
-        return np.concatenate((self.cars.distances, normalized_speeds), axis=-1).astype(np.float32)
+        distances = self.cars.get_distances(self.current_circuit)
+        return np.concatenate((distances, normalized_speeds), axis=-1).astype(np.float32)
 
     def step(self, actions):
         """Takes action i and returns the new state, the reward and if we have
@@ -83,15 +104,14 @@ class Environment(gym.Env):
         if self.action_type == 'discrete':
             actions = [self.actions[action_id] for action_id in actions]
         actions = np.array(actions)
-        self.cars.action(actions)
-        self.cars.step()
+        self.cars.action(actions, self.current_circuit)
 
         done = self.done
         reward = self.reward
         obs = self.current_state
 
         if self.render_ui:
-            self.ui.update()
+            self.ui.update(self.cars, self.current_circuit)
             self.render_ui = False
 
         if self.n_cars > 1:
@@ -106,16 +126,18 @@ class Environment(gym.Env):
         crashed = self.cars.crashed[0]
         if crashed:
             reward -= 0.5
-        if self.circuit.laps[0] + self.circuit.progression[0] > self.progression[0]:
-            reward += (self.circuit.laps[0] + self.circuit.progression[0] - self.progression[0])
-            self.progression[0] = self.circuit.laps[0] + self.circuit.progression[0]
+
+        circuit = self.current_circuit
+        if circuit.laps[0] + circuit.progression[0] > self.progression[0]:
+            reward += (circuit.laps[0] + circuit.progression[0] - self.progression[0])
+            self.progression[0] = circuit.laps[0] + circuit.progression[0]
         reward += self.cars.speeds[0]/20
         return np.float(reward)
 
     @property
     def done(self) -> bool:
         """Is the episode over ?"""
-        return np.all(np.logical_or(self.cars.crashed, self.circuit.laps >= 2))
+        return np.all(np.logical_or(self.cars.crashed, self.current_circuit.laps >= 2))
 
     def render(self, render_mode="human"):
         self.render_ui = True

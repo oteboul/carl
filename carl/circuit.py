@@ -19,9 +19,6 @@ class Circuit(object):
         self.width = width
         self.circuit = self.line.buffer(self.width, cap_style=1)
 
-        # Reset display
-        self.reset_render()
-
         # For numerical stabilities when checking if something is inside the
         # circuit.
         self.dilated = self.line.buffer(self.width * 1.01, cap_style=1)
@@ -68,17 +65,6 @@ class Circuit(object):
         self.chicken_dinner = False
         self.half_chicken_dinner = False
 
-    def reset_render(self):
-        if not hasattr(self, 'texts'):
-            self.texts = [None for _ in range(self.n_cars)]
-        else:
-            for text in self.texts:
-                text.set_text('')
-                text.set_color('black')
-
-                bbox = dict(facecolor='none', edgecolor='none', boxstyle='round,pad=1')
-                text.set_bbox(bbox)
-
     def update_checkpoints(self, start, stop):
         x_start, y_start = start
         x_stop, y_stop = stop
@@ -109,29 +95,38 @@ class Circuit(object):
 
     def plot(self, ax, color='gray', skeleton=True):
         if skeleton:
-            ax.plot(
+            self.skeleton_patch = ax.plot(
                 self.line.xy[0], self.line.xy[1],
                 color='white', linewidth=3, solid_capstyle='round', zorder=3,
                 linestyle='--'
             )
 
-        ax.plot(
+        self.start_line_patch = ax.plot(
             self.start_line.xy[0], self.start_line.xy[1],
             color='black', linewidth=3, linestyle='-', zorder=3
         )
 
-        patch = PolygonPatch(
+        self.circuit_patch = PolygonPatch(
             self.circuit, fc=color, ec='black', alpha=0.5, zorder=2
         )
-        ax.add_patch(patch)
+        ax.add_patch(self.circuit_patch)
 
         offset_x = (self.circuit.bounds[2] - self.circuit.bounds[0]) * 0.35
         offset_y = (self.circuit.bounds[3] - self.circuit.bounds[1]) * 0.2
 
         self.x_min, self.x_max = self.circuit.bounds[0], self.circuit.bounds[2] + offset_x
         self.y_min, self.y_max = self.circuit.bounds[1], self.circuit.bounds[3] + offset_y
-        ax.text(self.x_max, self.y_max, 'SCOREBOARD',
+
+        self.scoreboard_text = ax.text(self.x_max, self.y_max, 'SCOREBOARD',
             fontname='Lucida Console', fontsize=20, ha='right', va='top')
+
+        self.texts = []
+        for rank in range(self.n_cars):
+            x_text_pos = self.x_max
+            y_text_pos = self.y_min + 0.8 * (self.y_max - self.y_min) * (1 - rank / self.n_cars)
+            text = ax.text(x_text_pos, y_text_pos, " ", fontname='Lucida Console', ha='right')
+            self.texts.append(text)
+
         ax.set_xlim(self.x_min, self.x_max)
         ax.set_ylim(self.y_min, self.y_max)
         ax.set_aspect(1)
@@ -171,20 +166,14 @@ class Circuit(object):
                 rank_text = ''
 
             text = f'{rank_text} {name} - Lap {lap+1} - {progress:2.0%} - {car_id}'
-            x_text_pos = self.x_max
-            y_text_pos = self.y_min + self.circuit.bounds[3] *  (1 - (rank-1)/self.n_cars)
+            text_patch = self.texts[rank - 1]
+            text_patch.set_visible(True)
+            text_patch.set_text(text)
+            text_patch.set_color(cars.colors[car_id])
+            bbox = dict(facecolor='none', edgecolor='none')
 
-            if self.texts[car_id] is None:
-                self.texts[car_id] = ax.text(x_text_pos, y_text_pos, text,
-                    fontname='Lucida Console', ha='right')
-            else:
-                self.texts[car_id].set_text(text)
-                if lap < 2:
-                    self.texts[car_id].set_position((x_text_pos, y_text_pos))
-                    self.texts[car_id].set_color(cars.colors[car_id])
             if lap > 1:
                 bbox = dict(facecolor=(1, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
-                self.texts[car_id].set_bbox(bbox)
                 if not self.half_chicken_dinner:
                     ax.set_title(f'{true_name} is on fire !',
                                  fontname='Lucida Console',
@@ -192,7 +181,6 @@ class Circuit(object):
                     self.half_chicken_dinner = True
             if lap >= 2:
                 bbox = dict(facecolor=(0, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
-                self.texts[car_id].set_bbox(bbox)
                 if not self.chicken_dinner:
                     ax.set_title(f'A winner is {true_name} ({car_id})!',
                                  fontname='Lucida Console',
@@ -200,20 +188,20 @@ class Circuit(object):
                     self.chicken_dinner = True
             if crashed[car_id]:
                 bbox = dict(facecolor=(1, 0, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
-                self.texts[car_id].set_bbox(bbox)
+
+            if bbox is not None:
+                text_patch.set_bbox(bbox)
+
         if not self.chicken_dinner:
             ax.set_title(f'Let the best AI win !',
                             fontname='Lucida Console',
                             fontsize=32)
 
-def generate_circuit(n_points=16, difficulty=0, circuit_size=(5, 2)):
-    n_points = min(25, n_points)
-    angles = [-np.pi/4 + 2*np.pi*k/n_points for k in range(3*n_points//4)]
-    points = [(circuit_size[0]/2, 0.5), (3*circuit_size[0]/2, 0.5)]
-    points += [(circuit_size[0]*(1+np.cos(angle)), circuit_size[1]*(1+np.sin(angle))) for angle in angles]
-    for i, angle in zip(range(n_points), angles):
-        rd_dist = 0
-        if difficulty > 0:
-            rd_dist = min(circuit_size) * np.random.vonmises(mu=0, kappa=32/difficulty)/np.pi
-        points[i+2] = tuple(np.array(points[i+2]) + rd_dist*np.array([np.cos(angle), np.sin(angle)]))
-    return np.array(points) - np.array([5, .6])
+    def remove_plot(self, ax):
+        self.start_line_patch[0].remove()
+        if hasattr(self, 'skeleton_patch'):
+            self.skeleton_patch[0].remove()
+        self.circuit_patch.remove()
+        self.scoreboard_text.remove()
+        for text in self.texts:
+            text.remove()

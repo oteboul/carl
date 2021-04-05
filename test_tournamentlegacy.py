@@ -1,10 +1,11 @@
 import os
-from learnrl import Agent, Playground
 
-from carl.circuit import generate_circuit
+import numpy as np
+from learnrl import Agent, Playground, Callback
+
+from carl.utils import generate_circuit
 from carl.environment import Environment
-
-from agents.DQN import DQNAgent
+from carl.agents.tensorflow.DQN import DQNAgent
 
 class MultiAgent(Agent):
 
@@ -28,12 +29,43 @@ class RandomAgent(Agent):
     def act(self, observations, greedy=False):
         return self.action_space.sample()
 
-# circuit_points = generate_circuit(difficulty=16)
-circuit_points = [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)]
-filenames = ['poulet.h5', 'pelle_chaton.h5', 'mathis.h5']
+class ScoreCallback(Callback):
+    def __init__(self, **kwargs):
+        self.step = 0
+
+    def on_step_end(self, step, logs):
+        self.step += 1
+
+    def on_episode_begin(self, step, logs):
+        self.step = 0
+
+    def on_episode_end(self, episode, logs):
+        env = self.playground.env   
+        circuit = env.current_circuit
+
+        progressions = circuit.laps + circuit.progression
+        crashed = env.cars.crashed
+
+        bonus = max(0, (2 - self.step / 200))
+        score = np.where(crashed, progressions, 2 + bonus)
+        print(f"score:{score}")
+
+circuits = [
+    [(0.5, 0), (2.5, 0), (3, 1), (3, 2), (2, 3), (1, 3), (0, 2), (0, 1)],
+    [(0, 0), (1, 2), (0, 4), (3, 4), (2, 2), (3, 0)],
+    [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)],
+    [(1, 0), (6, 0), (6, 1), (5, 1), (5, 2), (6, 2), (6, 3), (4, 3), (4, 2), (2, 2), (2, 3), (0, 3), (0, 1)],
+    [(2, 0), (5, 0), (5.5, 1.5), (7, 2), (7, 4), (6, 4), (5, 3), (4, 4), (3.5, 3), (3, 4), (2, 3), (1, 4), (0, 4), (0, 2), (1.5, 1.5)],
+    generate_circuit(n_points=25, difficulty=0),
+    generate_circuit(n_points=20, difficulty=5),
+    generate_circuit(n_points=15, difficulty=20),
+    generate_circuit(n_points=20, difficulty=50),
+    generate_circuit(n_points=20, difficulty=100),
+]
+filenames = ['poulet.h5', 'pelle_chaton.h5', 'mathis.h5', 'poulet29.h5']
 
 n_agents = len(filenames)
-env = Environment(circuit_points, n_agents, action_type='discrete')
+env = Environment(circuits, n_agents, action_type='discrete')
 agents = [DQNAgent(env.action_space) for _ in range(n_agents)]
 
 for agent, filename in zip(agents, filenames):
@@ -42,4 +74,4 @@ for agent, filename in zip(agents, filenames):
 
 multi_agent = MultiAgent(agents)
 pg = Playground(env, multi_agent)
-pg.test(5)
+pg.test(len(circuits), callbacks=[ScoreCallback()])
