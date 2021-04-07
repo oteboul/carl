@@ -1,78 +1,86 @@
-import colorsys
-import glob
-import logging
-import os.path
-import random
+import os
 
-from carl.agent import DQLAgent
+import numpy as np
+from learnrl import Agent, Playground, Callback
+
+from carl.utils import generate_circuit
 from carl.environment import Environment
+from carl.agents.tensorflow.DQN import DQNAgent
 
+class MultiAgent(Agent):
 
-class TournamentEnvironment(Environment):
-    """The tournament environment is a tournament, which on goes till n laps"""
-    def __init__(self, circuit, render, laps):
-        super().__init__(circuit, render)
-        self.laps = laps
+    def __init__(self, agents):
+        self.agents = agents
 
-    def isEnd(self) -> bool:
-        return not self.car.in_circuit() or self.circuit.laps >= self.laps
+    def act(self, observations, greedy=False):
+        if len(self.agents) > 1:
+            actions = []
+            for obs, agent in zip(observations, self.agents):
+                actions.append(agent.act(obs, greedy))
+            return actions
+        else:
+            return self.agents[0].act(observations, greedy)
 
+class RandomAgent(Agent):
 
-class Performance(object):
-    def __init__(self, laps, steps, name):
-        self.laps = laps
-        self.steps = steps
-        self.name = name
+    def __init__(self, action_space):
+        self.action_space = action_space
+    
+    def act(self, observations, greedy=False):
+        return self.action_space.sample()
 
-    def __lt__(self, other):
-        return (self.laps, -self.steps) < (other.laps, -other.steps)
+class ScoreCallback(Callback):
+    def __init__(self, **kwargs):
+        self.step = 0
 
-    def __repr__(self):
-        return "{name}: {laps} laps in {steps} steps".format(**vars(self))
+    def on_run_begin(self, logs):
+        self.score = np.zeros(self.playground.env.n_cars)
 
+    def on_step_end(self, step, logs):
+        self.step += 1
 
-class Tournament(object):
-    """The tournament itself: reads all the models from the folder and the cars
-    on the circuit till they finish and sort their performance"""
+    def on_episode_begin(self, step, logs):
+        self.step = 0
 
-    def __init__(self, env, max_num_steps, folder='models/'):
-        self.env = env
-        self.circuit = self.env.circuit
-        self.max_num_steps = max_num_steps
-        self.folder = folder
-        self.agent = DQLAgent(max_steps=self.max_num_steps)
+    def on_episode_end(self, episode, logs):
+        env = self.playground.env   
+        circuit = env.current_circuit
 
-    def ranking(self):
-        return "\n".join(map(
-            lambda p: "{}. {}".format(p[0] + 1, p[1]), enumerate(self.scores)))
+        progressions = circuit.laps + circuit.progression
+        crashed = env.cars.crashed
 
-    @staticmethod
-    def makeColor(h):
-        return "#{:02x}{:02x}{:02x}".format(
-            *map(lambda x: int(255*x), colorsys.hsv_to_rgb(h, 0.8, 0.8)))
+        bonus = max(0, (2 - self.step / 200))
+        score = np.where(crashed, progressions, 2 + bonus)
+        self.score += score
+    
+    def on_run_end(self, logs):
+        score = self.score
+        if len(score) == 1:
+            score = score[0]
+        print(f"score:{score}")
 
-    def save(self, filename='ranking.txt'):
-        with open(filename, 'w') as fp:
-            fp.write(self.ranking())
+circuits = [
+    [(0.5, 0), (2.5, 0), (3, 1), (3, 2), (2, 3), (1, 3), (0, 2), (0, 1)],
+    [(0, 0), (1, 2), (0, 4), (3, 4), (2, 2), (3, 0)],
+    [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)],
+    [(1, 0), (6, 0), (6, 1), (5, 1), (5, 2), (6, 2), (6, 3), (4, 3), (4, 2), (2, 2), (2, 3), (0, 3), (0, 1)],
+    [(2, 0), (5, 0), (5.5, 1.5), (7, 2), (7, 4), (6, 4), (5, 3), (4, 4), (3.5, 3), (3, 4), (2, 3), (1, 4), (0, 4), (0, 2), (1.5, 1.5)],
+    generate_circuit(n_points=25, difficulty=0),
+    generate_circuit(n_points=20, difficulty=5),
+    generate_circuit(n_points=15, difficulty=20),
+    generate_circuit(n_points=20, difficulty=50),
+    generate_circuit(n_points=20, difficulty=100),
+]
+filenames = ['poulet29.h5']
 
-    def run(self):
-        self.scores = []
-        filenames = glob.glob(os.path.join(self.folder, '*.h5'))
-        for k, filename in enumerate(filenames):
-            self.agent.load(filename)
-            name = os.path.basename(filename)[:-3]
-            debug = "{}\n\n{}".format(self.ranking(), name)
+n_agents = len(filenames)
+env = Environment(circuits, n_agents, action_type='discrete')
+agents = [DQNAgent(env.action_space) for _ in range(n_agents)]
 
-            self.env.car.color = self.makeColor(random.random())
-            perf = Performance(0, 0, name)
-            try:
-                _, steps = self.agent.run_once(
-                    self.env, train=False, greedy=True, name=debug)
-                perf.laps = self.circuit.laps + self.circuit.progression
-                perf.steps = steps
-            except Exception as e:
-                logging.error('model {} failed: {}'.format(name, e))
+for agent, filename in zip(agents, filenames):
+    filepath = os.path.join('models', filename)
+    agent.load(filepath)
 
-            self.scores.append(perf)
-            self.scores.sort(reverse=True)
-            self.save()
+multi_agent = MultiAgent(agents)
+pg = Playground(env, multi_agent)
+pg.test(len(circuits), callbacks=[ScoreCallback()])
