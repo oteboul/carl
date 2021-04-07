@@ -25,7 +25,7 @@ class RandomAgent(Agent):
 
     def __init__(self, action_space):
         self.action_space = action_space
-    
+
     def act(self, observations, greedy=False):
         return self.action_space.sample()
 
@@ -43,7 +43,7 @@ class ScoreCallback(Callback):
         self.step = 0
 
     def on_episode_end(self, episode, logs):
-        env = self.playground.env   
+        env = self.playground.env
         circuit = env.current_circuit
 
         progressions = circuit.laps + circuit.progression
@@ -52,7 +52,7 @@ class ScoreCallback(Callback):
         bonus = max(0, (2 - self.step / 200))
         score = np.where(crashed, progressions, 2 + bonus)
         self.score += score
-    
+
     def on_run_end(self, logs):
         score = self.score
         if len(score) == 1:
@@ -63,8 +63,10 @@ circuits = [
     [(0.5, 0), (2.5, 0), (3, 1), (3, 2), (2, 3), (1, 3), (0, 2), (0, 1)],
     [(0, 0), (1, 2), (0, 4), (3, 4), (2, 2), (3, 0)],
     [(0, 0), (0.5, 1), (0, 2), (2, 2), (3, 1), (6, 2), (6, 0)],
-    [(1, 0), (6, 0), (6, 1), (5, 1), (5, 2), (6, 2), (6, 3), (4, 3), (4, 2), (2, 2), (2, 3), (0, 3), (0, 1)],
-    [(2, 0), (5, 0), (5.5, 1.5), (7, 2), (7, 4), (6, 4), (5, 3), (4, 4), (3.5, 3), (3, 4), (2, 3), (1, 4), (0, 4), (0, 2), (1.5, 1.5)],
+    [(1, 0), (6, 0), (6, 1), (5, 1), (5, 2), (6, 2), (6, 3),
+     (4, 3), (4, 2), (2, 2), (2, 3), (0, 3), (0, 1)],
+    [(2, 0), (5, 0), (5.5, 1.5), (7, 2), (7, 4), (6, 4), (5, 3), (4, 4),
+     (3.5, 3), (3, 4), (2, 3), (1, 4), (0, 4), (0, 2), (1.5, 1.5)],
     generate_circuit(n_points=25, difficulty=0),
     generate_circuit(n_points=20, difficulty=5),
     generate_circuit(n_points=15, difficulty=20),

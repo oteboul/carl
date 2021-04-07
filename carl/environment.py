@@ -9,10 +9,11 @@ import colorsys
 
 
 class Environment(gym.Env):
-    NUM_SENSORS = 5
 
-    def __init__(self, circuits, n_cars=1, action_type='discrete', render_sensors=None):
+    def __init__(self, circuits, n_cars=1, action_type='discrete',
+        render_sensors=None, n_sensors=5):
         self.render_sensors = render_sensors if render_sensors else n_cars < 6
+        self.NUM_SENSORS = n_sensors
 
         if isinstance(circuits, Circuit) or isinstance(circuits[0][0], (int, float)):
             circuits = [circuits]
