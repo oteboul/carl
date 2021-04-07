@@ -33,12 +33,14 @@ class ScoreCallback(Callback):
     def __init__(self, **kwargs):
         self.step = 0
 
+    def on_run_begin(self, logs):
+        self.score = np.zeros(self.playground.env.n_cars)
+
     def on_step_end(self, step, logs):
         self.step += 1
 
     def on_episode_begin(self, step, logs):
         self.step = 0
-        self.score = np.zeros(self.playground.env.n_cars)
 
     def on_episode_end(self, episode, logs):
         env = self.playground.env   
@@ -48,7 +50,8 @@ class ScoreCallback(Callback):
         crashed = env.cars.crashed
 
         bonus = max(0, (2 - self.step / 200))
-        self.score += np.where(crashed, progressions, 2 + bonus)
+        score = np.where(crashed, progressions, 2 + bonus)
+        self.score += score
     
     def on_run_end(self, logs):
         score = self.score
@@ -68,7 +71,7 @@ circuits = [
     generate_circuit(n_points=20, difficulty=50),
     generate_circuit(n_points=20, difficulty=100),
 ]
-filenames = ['poulet.h5', 'pelle_chaton.h5', 'mathis.h5', 'poulet29.h5']
+filenames = ['poulet29.h5']
 
 n_agents = len(filenames)
 env = Environment(circuits, n_agents, action_type='discrete')
