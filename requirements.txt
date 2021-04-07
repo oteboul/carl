@@ -6,4 +6,4 @@ jupyter
 h5py<3.0.0
 matplotlib
 gym
-learnrl @ git+https://github.com/MathisFederico/LearnRL.git@dev#egg=learnrl
+learnrl>=1.0.0
