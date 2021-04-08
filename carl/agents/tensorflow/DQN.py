@@ -223,6 +223,5 @@ if __name__ == "__main__":
     pg.fit(
         1000, verbose=2, metrics=metrics,
         episodes_cycle_len=1,
-        callbacks=[valid, check],
-        reward_handler=lambda **kwargs: 0.1 * kwargs.get('reward')
+        callbacks=[valid, check]
     )
