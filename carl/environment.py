@@ -11,9 +11,10 @@ import colorsys
 class Environment(gym.Env):
 
     def __init__(self, circuits, n_cars=1, action_type='discrete',
-        render_sensors=None, n_sensors=5):
+        render_sensors=None, n_sensors=5, fov=np.pi):
         self.render_sensors = render_sensors if render_sensors else n_cars < 6
         self.NUM_SENSORS = n_sensors
+        self.FOV = fov
 
         if isinstance(circuits, Circuit) or isinstance(circuits[0][0], (int, float)):
             circuits = [circuits]
@@ -32,7 +33,8 @@ class Environment(gym.Env):
             self.circuits[self.current_circuit_id],
             n_cars=self.n_cars,
             num_sensors=self.NUM_SENSORS,
-            render_sensors=self.render_sensors
+            render_sensors=self.render_sensors,
+            fov=self.FOV
         )
 
         self.render_ui = False

@@ -76,7 +76,7 @@ circuits = [
 filenames = ['poulet29.h5']
 
 n_agents = len(filenames)
-env = Environment(circuits, n_agents, action_type='discrete')
+env = Environment(circuits, n_agents, action_type='discrete', n_sensors=7, fov=np.pi*210/180)
 agents = [DQNAgent(env.action_space) for _ in range(n_agents)]
 
 for agent, filename in zip(agents, filenames):

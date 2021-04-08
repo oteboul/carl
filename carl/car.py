@@ -10,9 +10,11 @@ class Cars(object):
     ANGLE_UNIT = np.pi / 16
     SPEED_UNIT = 0.02
 
-    def __init__(self, circuit, n_cars=1, num_sensors=5, names=None, colors=None, render_sensors=True):
+    def __init__(self, circuit, n_cars=1, num_sensors=5, names=None, colors=None,
+        render_sensors=True, fov=np.pi):
         self.n_cars = n_cars
         self.num_sensors = num_sensors
+        self.fov = fov
 
         ones = np.ones(self.n_cars)
         self.anchors = (
@@ -133,7 +135,7 @@ class Cars(object):
 
     @property
     def angles(self):
-        return [-np.pi / 2 + i * np.pi / (self.num_sensors - 1) for i in range(self.num_sensors)]
+        return [-self.fov / 2 + i * self.fov / (self.num_sensors - 1) for i in range(self.num_sensors)]
 
     def get_distances(self, circuit):
         distances = []
