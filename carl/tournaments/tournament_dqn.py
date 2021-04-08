@@ -73,14 +73,17 @@ circuits = [
     generate_circuit(n_points=20, difficulty=50),
     generate_circuit(n_points=20, difficulty=100),
 ]
-filenames = ['poulet29.h5']
+
+
+filenames = os.listdir(os.path.join('models', 'DQN'))
+teamnames = [name.split('.')[0].capitalize() for name in filenames]
 
 n_agents = len(filenames)
-env = Environment(circuits, n_agents, action_type='discrete', n_sensors=7, fov=np.pi*210/180)
+env = Environment(circuits, n_agents, names=teamnames, action_type='discrete', n_sensors=7, fov=np.pi*210/180)
 agents = [DQNAgent(env.action_space) for _ in range(n_agents)]
 
 for agent, filename in zip(agents, filenames):
-    filepath = os.path.join('models', filename)
+    filepath = os.path.join('models', 'DQN', filename)
     agent.load(filepath)
 
 multi_agent = MultiAgent(agents)

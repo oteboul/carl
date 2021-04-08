@@ -1,6 +1,7 @@
 import numpy as np
 import shapely.geometry as geom
 from descartes import PolygonPatch
+import matplotlib.patheffects as PathEffects
 from copy import deepcopy
 
 from carl.utils import make_color
@@ -14,7 +15,6 @@ class Cars(object):
         render_sensors=True, fov=np.pi):
         self.n_cars = n_cars
         self.num_sensors = num_sensors
-        self.fov = fov
 
         ones = np.ones(self.n_cars)
         self.anchors = (
@@ -44,10 +44,16 @@ class Cars(object):
                 f'Car n°{i+1}'
                 for i in range(self.n_cars)
             ])
+        elif isinstance(names, str):
+            self.names = np.array([names for i in range(self.n_cars)])
         else:
             self.names = names
 
         self.render_sensors = render_sensors
+        self.angles = [
+            -fov / 2 + i * fov / (self.num_sensors - 1)
+            for i in range(self.num_sensors)
+        ]
 
     def reset(self, start_coords):
         self.xs = np.array([start_coords[0] for _ in range(self.n_cars)])
@@ -67,6 +73,7 @@ class Cars(object):
                 for line in sensor_lines:
                     line.set_alpha(0)
         else:
+            self.hover_text = [None for _ in range(self.n_cars)]
             self.patch = [None for _ in range(self.n_cars)]
             self.sensor_lines = [None for _ in range(self.n_cars)]
 
@@ -133,10 +140,6 @@ class Cars(object):
         self.sensor_lines_data[:, i] = np.stack((origins, intersections), axis=-1)
         return intersections
 
-    @property
-    def angles(self):
-        return [-self.fov / 2 + i * self.fov / (self.num_sensors - 1) for i in range(self.num_sensors)]
-
     def get_distances(self, circuit):
         distances = []
         origin = np.array([1, 0])
@@ -156,32 +159,53 @@ class Cars(object):
                 else:
                     self.patch[car_id]._path._vertices = other._path._vertices
                     self.patch[car_id].set_facecolor(self.colors[car_id])
+            
+                car_x, cay_y = car.centroid.x, car.centroid.y,
+                if self.hover_text[car_id] is None:
+                    self.hover_text[car_id] = ax.text(
+                        car_x, cay_y,
+                        self.names[car_id],
+                        color=self.colors[car_id],
+                        fontname='Lucida Console',
+                        ha='center',
+                        zorder=10
+                    )
+                    self.hover_text[car_id].set_path_effects(
+                        [PathEffects.withStroke(linewidth=3, foreground='w')]
+                    )
+                else:
+                    self.hover_text[car_id].set_position((car_x, cay_y))
 
                 if not self.in_circuit[car_id]:
                     self.patch[car_id].set_alpha(0.1)
+                    self.hover_text[car_id].set_alpha(0.1)
                 elif self.time == 0:
                     self.patch[car_id].set_alpha(1.)
+                    self.hover_text[car_id].set_alpha(1.)
 
         if self.render_sensors:
-            for car_id in range(self.n_cars):
-                if not self.render_locked[car_id]:
-                    sensor_lines = self.sensor_lines_data[car_id]
-                    if self.sensor_lines[car_id] is None:
-                        self.sensor_lines[car_id] = []
-                        for curr_x, curr_y in sensor_lines:
-                            line = ax.plot(
-                                curr_x, curr_y, color='#df5a65', linestyle=':', lw=2,
-                                zorder=5)
-                            self.sensor_lines[car_id].append(line[0])
-                    else:
-                        for k, (curr_x, curr_y) in enumerate(sensor_lines):
-                            line = self.sensor_lines[car_id][k]
-                            line.set_alpha(1)
-                            line.set_xdata(curr_x)
-                            line.set_ydata(curr_y)
+            self._plot_sensors(ax)
 
         self.render_locked = np.logical_not(self.in_circuit)
         self.time += 1
+    
+    def _plot_sensors(self, ax):
+        for car_id in range(self.n_cars):
+            if not self.render_locked[car_id]:
+                sensor_lines = self.sensor_lines_data[car_id]
+                if self.sensor_lines[car_id] is None:
+                    self.sensor_lines[car_id] = []
+                    for curr_x, curr_y in sensor_lines:
+                        line = ax.plot(
+                            curr_x, curr_y, color='#df5a65', linestyle=':', lw=2,
+                            zorder=5)
+                        self.sensor_lines[car_id].append(line[0])
+                else:
+                    for k, (curr_x, curr_y) in enumerate(sensor_lines):
+                        line = self.sensor_lines[car_id][k]
+                        line.set_alpha(1)
+                        line.set_xdata(curr_x)
+                        line.set_ydata(curr_y)
 
     def plot(self, ax):
         self.update_plot(ax)
