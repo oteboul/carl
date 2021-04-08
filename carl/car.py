@@ -1,17 +1,18 @@
 import numpy as np
 import shapely.geometry as geom
 from descartes import PolygonPatch
+import matplotlib.patheffects as PathEffects
 from copy import deepcopy
 
+from carl.utils import make_color
 
 class Cars(object):
 
     ANGLE_UNIT = np.pi / 16
     SPEED_UNIT = 0.02
 
-    def __init__(self, circuit, n_cars=1, num_sensors=5,
-                       names='noname', colors='#44dafb', render_sensors=True):
-        self.circuit = circuit
+    def __init__(self, circuit, n_cars=1, num_sensors=5, names=None, colors=None,
+        render_sensors=True, fov=np.pi):
         self.n_cars = n_cars
         self.num_sensors = num_sensors
 
@@ -23,40 +24,60 @@ class Cars(object):
             (ones, -ones),
         )
 
-        self.reset()
-        self.reset_render()
-
+        start = circuit.start.x, circuit.start.y
+        self.reset(start)
         self.w = 0.2
         self.h = 2 * self.w
         self.compute_box()
+        self.reset_render()
 
-        if isinstance(colors, str):
-            self.colors = np.full((self.n_cars,), colors)
+        if colors is None:
+            self.colors = np.array([
+                make_color(np.random.random())
+                for _ in range(self.n_cars)
+            ])
         else:
             self.colors = colors
 
-        if isinstance(names, str):
-            self.names = np.full((self.n_cars,), names)
+        if names is None:
+            self.names = np.array([
+                f'Car n°{i+1}'
+                for i in range(self.n_cars)
+            ])
+        elif isinstance(names, str):
+            self.names = np.array([names for i in range(self.n_cars)])
         else:
             self.names = names
 
         self.render_sensors = render_sensors
+        self.angles = [
+            -fov / 2 + i * fov / (self.num_sensors - 1)
+            for i in range(self.num_sensors)
+        ]
 
-    def reset(self):
-        self.xs = np.array([self.circuit.start.x for _ in range(self.n_cars)])
-        self.ys = np.array([self.circuit.start.y for _ in range(self.n_cars)])
+    def reset(self, start_coords):
+        self.xs = np.array([start_coords[0] for _ in range(self.n_cars)])
+        self.ys = np.array([start_coords[1] for _ in range(self.n_cars)])
         self.thetas = np.array([0. for _ in range(self.n_cars)])
         self.speeds = np.array([0. for _ in range(self.n_cars)])
         self.in_circuit = np.ones(self.n_cars, dtype=np.bool)
         self.render_locked = np.zeros(self.n_cars, np.bool)
+        self.sensor_lines_data = np.zeros((self.n_cars, self.num_sensors, 2, 2))
         self.time = 0
     
-    def reset_render(self):
-        self.patch = [None for _ in range(self.n_cars)]
-        self.sensor_lines = [None for _ in range(self.n_cars)]
-        self.sensor_lines_data = np.zeros((self.n_cars, self.num_sensors, 2, 2))
+    def reset_render(self, ax=None):
+        if hasattr(self, 'patch'):
+            for patch in getattr(self, 'patch'):
+                patch.set_alpha(0)
+            for sensor_lines in getattr(self, 'sensor_lines'):
+                for line in sensor_lines:
+                    line.set_alpha(0)
+        else:
+            self.hover_text = [None for _ in range(self.n_cars)]
+            self.patch = [None for _ in range(self.n_cars)]
+            self.sensor_lines = [None for _ in range(self.n_cars)]
 
-    def action(self, actions):
+    def action(self, actions, circuit):
         """Change the speed of the car and / or its direction.
         Both can be negative."""
         speeds = actions[:, 0]
@@ -64,16 +85,20 @@ class Cars(object):
 
         self.speeds = np.maximum(0.0, self.speeds + speeds * self.SPEED_UNIT)
         self.thetas += self.in_circuit * thetas * self.ANGLE_UNIT
+
+        start = deepcopy((self.xs, self.ys))
         self.move()
+        stop = (self.xs, self.ys)
+        circuit.update_checkpoints(start, stop)
+
+        for car_id, car in enumerate(self.cars):
+            self.in_circuit[car_id] = car in circuit
 
     def move(self):
         """Based on the current speed and position of the car, make it move."""
-        start = deepcopy((self.xs, self.ys))
         self.xs += self.in_circuit * self.speeds * np.cos(self.thetas)
         self.ys += self.in_circuit * self.speeds * np.sin(self.thetas)
         self.compute_box()
-        stop = (self.xs, self.ys)
-        self.circuit.update_checkpoints(start, stop)
 
     def coords(self, i, j):
         """From car coordinates to world coordinates, (0, 0) being the center of
@@ -88,7 +113,7 @@ class Cars(object):
         points = np.stack([self.coords(i, j) for i, j in self.anchors], axis=-2)
         self.cars = [geom.Polygon(points[k]) for k in range(self.n_cars)]
 
-    def intersection(self, i, phi):
+    def intersection(self, i, phi, circuit):
         """Computes the intersection coords between the front of the car and
         the border of the circuit in the direction phi."""
         intersections = []
@@ -101,11 +126,11 @@ class Cars(object):
             # Compute intersection with circuit that lies inside the circuit
             origin = geom.Point(org)
             try:
-                p = line.intersection(self.circuit.circuit)
+                p = line.intersection(circuit.circuit)
                 end = p if isinstance(p, geom.LineString) else p[0]
                 end = end.boundary[1]
                 seg = geom.LineString([origin, end])
-                if seg not in self.circuit:
+                if seg not in circuit:
                     intersections.append(origin.xy)
                 else:
                     intersections.append(end.xy)
@@ -115,23 +140,14 @@ class Cars(object):
         self.sensor_lines_data[:, i] = np.stack((origins, intersections), axis=-1)
         return intersections
 
-    @property
-    def angles(self):
-        return [-np.pi / 2 + i * np.pi / (self.num_sensors - 1) for i in range(self.num_sensors)]
-
-    @property
-    def distances(self):
+    def get_distances(self, circuit):
         distances = []
         origin = np.array([1, 0])
         for i, phi in enumerate(self.angles):
-            intersections = self.intersection(i, phi)
+            intersections = self.intersection(i, phi, circuit)
             distance = np.sqrt(np.sum(np.square(intersections - origin), axis=-1))
             distances.append(distance)
         return np.stack(distances, axis=-1)
-    
-    def step(self):
-        for car_id, car in enumerate(self.cars):
-            self.in_circuit[car_id] = car in self.circuit
 
     def update_plot(self, ax):
         # Plot the car
@@ -143,31 +159,53 @@ class Cars(object):
                 else:
                     self.patch[car_id]._path._vertices = other._path._vertices
                     self.patch[car_id].set_facecolor(self.colors[car_id])
+            
+                car_x, cay_y = car.centroid.x, car.centroid.y,
+                if self.hover_text[car_id] is None:
+                    self.hover_text[car_id] = ax.text(
+                        car_x, cay_y,
+                        self.names[car_id],
+                        color=self.colors[car_id],
+                        fontname='Lucida Console',
+                        ha='center',
+                        zorder=10
+                    )
+                    self.hover_text[car_id].set_path_effects(
+                        [PathEffects.withStroke(linewidth=3, foreground='w')]
+                    )
+                else:
+                    self.hover_text[car_id].set_position((car_x, cay_y))
 
                 if not self.in_circuit[car_id]:
                     self.patch[car_id].set_alpha(0.1)
+                    self.hover_text[car_id].set_alpha(0.1)
                 elif self.time == 0:
                     self.patch[car_id].set_alpha(1.)
+                    self.hover_text[car_id].set_alpha(1.)
 
         if self.render_sensors:
-            for car_id in range(self.n_cars):
-                if not self.render_locked[car_id]:
-                    sensor_lines = self.sensor_lines_data[car_id]
-                    if self.sensor_lines[car_id] is None:
-                        self.sensor_lines[car_id] = []
-                        for curr_x, curr_y in sensor_lines:
-                            line = ax.plot(
-                                curr_x, curr_y, color='#df5a65', linestyle=':', lw=2,
-                                zorder=5)
-                            self.sensor_lines[car_id].append(line[0])
-                    else:
-                        for k, (curr_x, curr_y) in enumerate(sensor_lines):
-                            line = self.sensor_lines[car_id][k]
-                            line.set_xdata(curr_x)
-                            line.set_ydata(curr_y)
+            self._plot_sensors(ax)
 
         self.render_locked = np.logical_not(self.in_circuit)
         self.time += 1
+    
+    def _plot_sensors(self, ax):
+        for car_id in range(self.n_cars):
+            if not self.render_locked[car_id]:
+                sensor_lines = self.sensor_lines_data[car_id]
+                if self.sensor_lines[car_id] is None:
+                    self.sensor_lines[car_id] = []
+                    for curr_x, curr_y in sensor_lines:
+                        line = ax.plot(
+                            curr_x, curr_y, color='#df5a65', linestyle=':', lw=2,
+                            zorder=5)
+                        self.sensor_lines[car_id].append(line[0])
+                else:
+                    for k, (curr_x, curr_y) in enumerate(sensor_lines):
+                        line = self.sensor_lines[car_id][k]
+                        line.set_alpha(1)
+                        line.set_xdata(curr_x)
+                        line.set_ydata(curr_y)
 
     def plot(self, ax):
         self.update_plot(ax)

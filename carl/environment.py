@@ -9,22 +9,37 @@ import colorsys
 
 
 class Environment(gym.Env):
-    NUM_SENSORS = 5
 
-    def __init__(self, circuit_points, n_cars=1, render=False, action_type='discrete', render_sensors=None):
-        self.n_cars = n_cars
+    def __init__(self, circuits, n_cars=1, action_type='discrete',
+        render_sensors=None, n_sensors=5, fov=np.pi, names=None):
         self.render_sensors = render_sensors if render_sensors else n_cars < 6
+        self.NUM_SENSORS = n_sensors
+        self.FOV = fov
 
-        self.circuit = Circuit(circuit_points, n_cars=self.n_cars)
-        self.cars = Cars(self.circuit,
-                         n_cars=self.n_cars,
-                         num_sensors=self.NUM_SENSORS,
-                         render_sensors=self.render_sensors)
+        if isinstance(circuits, Circuit) or isinstance(circuits[0][0], (int, float)):
+            circuits = [circuits]
 
-        self.render_ui = render
+        self.circuits = circuits
+        for i, circuit in enumerate(self.circuits):
+            if isinstance(circuit, Circuit):
+                self.n_cars = circuit.n_cars
+                self.circuits[i] = circuit
+            else:
+                self.n_cars = n_cars
+                self.circuits[i] = Circuit(circuit, n_cars=self.n_cars)
+        
+        self.current_circuit_id = -1
+        self.cars = Cars(
+            self.circuits[self.current_circuit_id],
+            names=names,
+            n_cars=self.n_cars,
+            num_sensors=self.NUM_SENSORS,
+            render_sensors=self.render_sensors,
+            fov=self.FOV
+        )
+
+        self.render_ui = False
         self.render_init = False
-        if render:
-            self.init_render()
 
         # Build individual action space
         self.action_type = action_type
@@ -43,38 +58,45 @@ class Environment(gym.Env):
 
         self.time = 0
         self.progression = np.array([0 for _ in range(self.n_cars)])
+
+    @property
+    def current_circuit(self):
+        return self.circuits[self.current_circuit_id % len(self.circuits)]
     
     def init_render(self):
         self.render_init = True
         if self.render_ui:
-            self.ui = Interface(self.circuit, self.cars)
+            self.ui = Interface()
+            self.ui.plot(self.cars, self.current_circuit)
             self.ui.show(block=False)
 
     def reset(self):
         self.time = 0
         self.progression = np.array([0 for _ in range(self.n_cars)])
-        self.cars.reset()
-        self.circuit.reset()
 
-        if not self.render_ui:
-            plt.close('all')
+        if self.render_init:
+            self.current_circuit.remove_plot(self.ui.ax)
+
+        self.current_circuit_id += 1
+        circuit = self.current_circuit
+
+        start = circuit.start.x , circuit.start.y
+        self.cars.reset(start)
+
+        if self.render_init:
             self.cars.reset_render()
-            self.circuit.reset_render()
-            self.render_init = False
+            circuit.plot(self.ui.ax)
 
         if self.n_cars > 1:
             return self.current_state
         else:
             return self.current_state[0]
 
-    @staticmethod
-    def makeColor(h):
-        return "#{:02x}{:02x}{:02x}".format(
-            *map(lambda x: int(255*x), colorsys.hsv_to_rgb(h, 0.8, 0.8)))
-
     @property
     def current_state(self):
-        return np.concatenate((self.cars.distances, np.expand_dims(self.cars.speeds, -1) / (10 * self.cars.SPEED_UNIT)), axis=-1).astype(np.float32)
+        normalized_speeds = np.expand_dims(self.cars.speeds, -1) / (10 * self.cars.SPEED_UNIT)
+        distances = self.cars.get_distances(self.current_circuit)
+        return np.concatenate((distances, normalized_speeds), axis=-1).astype(np.float32)
 
     def step(self, actions):
         """Takes action i and returns the new state, the reward and if we have
@@ -86,15 +108,14 @@ class Environment(gym.Env):
         if self.action_type == 'discrete':
             actions = [self.actions[action_id] for action_id in actions]
         actions = np.array(actions)
-        self.cars.action(actions)
-        self.cars.step()
+        self.cars.action(actions, self.current_circuit)
 
         done = self.done
         reward = self.reward
         obs = self.current_state
 
         if self.render_ui:
-            self.ui.update()
+            self.ui.update(self.cars, self.current_circuit)
             self.render_ui = False
 
         if self.n_cars > 1:
@@ -109,18 +130,20 @@ class Environment(gym.Env):
         crashed = self.cars.crashed[0]
         if crashed:
             reward -= 0.5
-        if self.circuit.laps[0] + self.circuit.progression[0] > self.progression[0]:
-            reward += (self.circuit.laps[0] + self.circuit.progression[0] - self.progression[0])
-            self.progression[0] = self.circuit.laps[0] + self.circuit.progression[0]
+
+        circuit = self.current_circuit
+        if circuit.laps[0] + circuit.progression[0] > self.progression[0]:
+            reward += (circuit.laps[0] + circuit.progression[0] - self.progression[0])
+            self.progression[0] = circuit.laps[0] + circuit.progression[0]
         reward += self.cars.speeds[0]/20
         return np.float(reward)
 
     @property
     def done(self) -> bool:
         """Is the episode over ?"""
-        return np.all(np.logical_or(self.cars.crashed, self.circuit.laps >= 2))
+        return np.all(np.logical_or(self.cars.crashed, self.current_circuit.laps >= 2))
 
-    def render(self):
+    def render(self, render_mode="human"):
         self.render_ui = True
         if not self.render_init:
             self.init_render()

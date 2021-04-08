@@ -4,7 +4,6 @@ venv*
 models/
 .vscode/
 .vs/
-legacy/
 .DS_Store
 main.py
 wandb
