@@ -11,10 +11,11 @@ import colorsys
 class Environment(gym.Env):
 
     def __init__(self, circuits, n_cars=1, action_type='discrete',
-        render_sensors=None, n_sensors=5, fov=np.pi, names=None):
+        render_sensors=None, n_sensors=5, fov=np.pi, names=None, road_width=0.3, max_steps=1000):
         self.render_sensors = render_sensors if render_sensors else n_cars < 6
         self.NUM_SENSORS = n_sensors
         self.FOV = fov
+        self.max_steps = max_steps
 
         if isinstance(circuits, Circuit) or isinstance(circuits[0][0], (int, float)):
             circuits = [circuits]
@@ -26,7 +27,7 @@ class Environment(gym.Env):
                 self.circuits[i] = circuit
             else:
                 self.n_cars = n_cars
-                self.circuits[i] = Circuit(circuit, n_cars=self.n_cars)
+                self.circuits[i] = Circuit(circuit, n_cars=self.n_cars, width=road_width)
         
         self.current_circuit_id = -1
         self.cars = Cars(
@@ -62,35 +63,6 @@ class Environment(gym.Env):
     @property
     def current_circuit(self):
         return self.circuits[self.current_circuit_id % len(self.circuits)]
-    
-    def init_render(self):
-        self.render_init = True
-        if self.render_ui:
-            self.ui = Interface()
-            self.ui.plot(self.cars, self.current_circuit)
-            self.ui.show(block=False)
-
-    def reset(self):
-        self.time = 0
-        self.progression = np.array([0 for _ in range(self.n_cars)])
-
-        if self.render_init:
-            self.current_circuit.remove_plot(self.ui.ax)
-
-        self.current_circuit_id += 1
-        circuit = self.current_circuit
-
-        start = circuit.start.x , circuit.start.y
-        self.cars.reset(start)
-
-        if self.render_init:
-            self.cars.reset_render()
-            circuit.plot(self.ui.ax)
-
-        if self.n_cars > 1:
-            return self.current_state
-        else:
-            return self.current_state[0]
 
     @property
     def current_state(self):
@@ -115,7 +87,7 @@ class Environment(gym.Env):
         obs = self.current_state
 
         if self.render_ui:
-            self.ui.update(self.cars, self.current_circuit)
+            self.ui.update(self.cars, self.current_circuit, self.time)
             self.render_ui = False
 
         if self.n_cars > 1:
@@ -141,9 +113,39 @@ class Environment(gym.Env):
     @property
     def done(self) -> bool:
         """Is the episode over ?"""
-        return np.all(np.logical_or(self.cars.crashed, self.current_circuit.laps >= 2))
+        return self.time >= self.max_steps \
+            or np.all(np.logical_or(self.cars.crashed, self.current_circuit.laps >= 2))
+
+    def reset(self):
+        self.time = 0
+        self.progression = np.array([0 for _ in range(self.n_cars)])
+
+        if self.render_init:
+            self.current_circuit.remove_plot(self.ui.ax)
+
+        self.current_circuit_id += 1
+        circuit = self.current_circuit
+        start = circuit.start.x , circuit.start.y
+        self.cars.reset(start)
+        circuit.reset()
+
+        if self.render_init:
+            self.cars.reset_render()
+            circuit.plot(self.ui.ax)
+
+        if self.n_cars > 1:
+            return self.current_state
+        else:
+            return self.current_state[0]
 
     def render(self, render_mode="human"):
         self.render_ui = True
         if not self.render_init:
             self.init_render()
+
+    def init_render(self):
+        self.render_init = True
+        if self.render_ui:
+            self.ui = Interface()
+            self.ui.plot(self.cars, self.current_circuit)
+            self.ui.show(block=False)

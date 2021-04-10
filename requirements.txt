@@ -5,5 +5,4 @@ descartes
 jupyter
 h5py<3.0.0
 matplotlib
-gym
-learnrl>=1.0.0
+learnrl>=1.0.1

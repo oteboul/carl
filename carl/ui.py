@@ -23,11 +23,11 @@ class Interface(object):
         circuit.plot(self.ax)
         cars.plot(self.ax)
 
-    def update(self, cars, circuit):
+    def update(self, cars, circuit, time):
         cars.update_plot(self.ax)
-        circuit.update_plot(self.ax, cars)
+        circuit.update_plot(self.ax, cars, time)
         self.fig.canvas.draw()
-        plt.pause(1/90)
+        plt.pause(1/240)
 
     def close(self):
         plt.close()

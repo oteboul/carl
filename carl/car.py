@@ -159,7 +159,7 @@ class Cars(object):
                 else:
                     self.patch[car_id]._path._vertices = other._path._vertices
                     self.patch[car_id].set_facecolor(self.colors[car_id])
-            
+
                 car_x, cay_y = car.centroid.x, car.centroid.y,
                 if self.hover_text[car_id] is None:
                     self.hover_text[car_id] = ax.text(

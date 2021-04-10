@@ -69,12 +69,12 @@ class Circuit(object):
         x_start, y_start = start
         x_stop, y_stop = stop
 
-        for k in range(self.n_cars):
-            x_str, y_str = x_start[k], y_start[k]
-            x_stp, y_stp = x_stop[k], y_stop[k]
+        for car_id in range(self.n_cars):
+            x_str, y_str = x_start[car_id], y_start[car_id]
+            x_stp, y_stp = x_stop[car_id], y_stop[car_id]
             traj = geom.LineString([(x_str, y_str), (x_stp, y_stp)])
 
-            checkpoints = self.checkpoints[k]
+            checkpoints = self.checkpoints[car_id]
             if not np.all(checkpoints):
                 for idx, line in enumerate(self.checklines):
                     if line.intersects(traj):
@@ -82,18 +82,18 @@ class Circuit(object):
 
             if np.all(checkpoints):
                 if self.start_line.intersects(traj):
-                    checkpoints = np.zeros(len(self.checklines), dtype=np.bool)
-                    self.laps[k] += 1
+                    self.checkpoints[car_id] = np.zeros(len(self.checklines), dtype=np.bool)
+                    self.laps[car_id] += 1
             
-            self.progression[k] = np.sum(checkpoints) / len(checkpoints)
-
-    def debug(self):
-        return "laps {}: {:.0f}%".format(self.laps, self.progression * 100)
+            self.progression[car_id] = np.sum(checkpoints) / len(checkpoints)
 
     def __contains__(self, shape):
         return self.dilated.contains(shape)
 
     def plot(self, ax, color='gray', skeleton=True):
+        title = 'Let the best AI win !'
+        ax.set_title(title, color='black', fontname='Lucida Console', fontsize=32)
+
         if skeleton:
             self.skeleton_patch = ax.plot(
                 self.line.xy[0], self.line.xy[1],
@@ -111,27 +111,30 @@ class Circuit(object):
         )
         ax.add_patch(self.circuit_patch)
 
-        offset_x = (self.circuit.bounds[2] - self.circuit.bounds[0]) * 0.35
-        offset_y = (self.circuit.bounds[3] - self.circuit.bounds[1]) * 0.2
+        offset_x = (self.circuit.bounds[2] - self.circuit.bounds[0]) * 0.15
+        offset_y = (self.circuit.bounds[3] - self.circuit.bounds[1]) * 0.3
 
         self.x_min, self.x_max = self.circuit.bounds[0], self.circuit.bounds[2] + offset_x
         self.y_min, self.y_max = self.circuit.bounds[1], self.circuit.bounds[3] + offset_y
 
         self.scoreboard_text = ax.text(self.x_max, self.y_max, 'SCOREBOARD',
-            fontname='Lucida Console', fontsize=20, ha='right', va='top')
+            fontname='Lucida Console', fontsize=20, ha='left', va='top')
+        self.time_text = ax.text(self.x_min, self.y_max, "Step: 0", alpha=0.3,
+            fontname='Lucida Console', fontsize=20, ha='left', va='top')
 
         self.texts = []
         for rank in range(self.n_cars):
             x_text_pos = self.x_max
             y_text_pos = self.y_min + 0.8 * (self.y_max - self.y_min) * (1 - rank / self.n_cars)
-            text = ax.text(x_text_pos, y_text_pos, " ", fontname='Lucida Console', ha='right')
+            text = ax.text(x_text_pos, y_text_pos, " ", fontname='Lucida Console', ha='left')
             self.texts.append(text)
 
         ax.set_xlim(self.x_min, self.x_max)
         ax.set_ylim(self.y_min, self.y_max)
         ax.set_aspect(1)
 
-    def update_plot(self, ax, cars):
+    def update_plot(self, ax, cars, time):
+        self.time_text.set_text(f"Step: {time}")
         crashed = cars.render_locked
         names = cars.names
         prog_total = self.progression + self.laps
@@ -172,30 +175,27 @@ class Circuit(object):
             text_patch.set_color(cars.colors[car_id])
             bbox = dict(facecolor='none', edgecolor='none')
 
-            if lap > 1:
-                bbox = dict(facecolor=(1, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
+            if lap == 1:
+                bbox = dict(facecolor=(1, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
                 if not self.half_chicken_dinner:
-                    ax.set_title(f'{true_name} is on fire !',
-                                 fontname='Lucida Console',
-                                 fontsize=32)
+                    title = f'{true_name} is on fire !'
+                    print(title)
                     self.half_chicken_dinner = True
-            if lap >= 2:
-                bbox = dict(facecolor=(0, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
+                    ax.set_title(title, fontname='Lucida Console', color='orange', fontsize=32)
+
+            elif lap == 2:
+                bbox = dict(facecolor=(0, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
                 if not self.chicken_dinner:
-                    ax.set_title(f'A winner is {true_name} ({car_id})!',
-                                 fontname='Lucida Console',
-                                 fontsize=32)
+                    title = f'A winner is {true_name} ({car_id})!'
+                    print(title)
                     self.chicken_dinner = True
+                    ax.set_title(title, fontname='Lucida Console', color='green', fontsize=32)
+
             if crashed[car_id]:
-                bbox = dict(facecolor=(1, 0, 0, 0.3), edgecolor='none', boxstyle='round,pad=1')
+                bbox = dict(facecolor=(1, 0, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
 
             if bbox is not None:
                 text_patch.set_bbox(bbox)
-
-        if not self.chicken_dinner:
-            ax.set_title(f'Let the best AI win !',
-                            fontname='Lucida Console',
-                            fontsize=32)
 
     def remove_plot(self, ax):
         self.start_line_patch[0].remove()
@@ -203,5 +203,6 @@ class Circuit(object):
             self.skeleton_patch[0].remove()
         self.circuit_patch.remove()
         self.scoreboard_text.remove()
+        self.time_text.remove()
         for text in self.texts:
             text.remove()
