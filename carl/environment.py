@@ -1,23 +1,27 @@
-from carl.car import Cars
-from carl.ui import Interface
-from carl.circuit import Circuit
 import numpy as np
 import gym
+
 import matplotlib.pyplot as plt
 import random
 import colorsys
 
+from carl.utils import generate_circuit
+from carl.car import Cars
+from carl.ui import Interface
+from carl.circuit import Circuit
 
 class Environment(gym.Env):
 
-    def __init__(self, circuits, n_cars=1, action_type='discrete',
+    def __init__(self, circuits, n_cars=1, action_type='discrete', add_random_circuits=False,
         render_sensors=None, n_sensors=5, fov=np.pi, names=None, road_width=0.3, max_steps=1000):
         self.render_sensors = render_sensors if render_sensors else n_cars < 6
         self.NUM_SENSORS = n_sensors
         self.FOV = fov
+        self.road_width = road_width
         self.max_steps = max_steps
+        self.add_random_circuits = add_random_circuits
 
-        if isinstance(circuits, Circuit) or isinstance(circuits[0][0], (int, float)):
+        if isinstance(circuits, Circuit):
             circuits = [circuits]
 
         self.circuits = circuits
@@ -27,9 +31,10 @@ class Environment(gym.Env):
                 self.circuits[i] = circuit
             else:
                 self.n_cars = n_cars
-                self.circuits[i] = Circuit(circuit, n_cars=self.n_cars, width=road_width)
-        
-        self.current_circuit_id = -1
+                self.circuits[i] = Circuit(circuit, n_cars=self.n_cars, width=self.road_width)
+        self.random_circuits = []
+
+        self._current_circuit_id = -1
         self.cars = Cars(
             self.circuits[self.current_circuit_id],
             names=names,
@@ -61,8 +66,14 @@ class Environment(gym.Env):
         self.progression = np.array([0 for _ in range(self.n_cars)])
 
     @property
+    def current_circuit_id(self):
+        all_circuits = self.circuits + self.random_circuits
+        return self._current_circuit_id % len(all_circuits)
+
+    @property
     def current_circuit(self):
-        return self.circuits[self.current_circuit_id % len(self.circuits)]
+        all_circuits = self.circuits + self.random_circuits
+        return all_circuits[self.current_circuit_id]
 
     @property
     def current_state(self):
@@ -123,7 +134,10 @@ class Environment(gym.Env):
         if self.render_init:
             self.current_circuit.remove_plot(self.ui.ax)
 
-        self.current_circuit_id += 1
+        self._current_circuit_id += 1
+        if self.add_random_circuits and self.current_circuit_id == 0:
+            self._reset_random_circuits()
+
         circuit = self.current_circuit
         start = circuit.start.x , circuit.start.y
         self.cars.reset(start)
@@ -149,3 +163,12 @@ class Environment(gym.Env):
             self.ui = Interface()
             self.ui.plot(self.cars, self.current_circuit)
             self.ui.show(block=False)
+
+    def _reset_random_circuits(self):
+        self.random_circuits = [
+            Circuit(
+                generate_circuit(n_points=20, difficulty=np.random.choice([0, 8, 16, 32])),
+                n_cars=self.n_cars, width=self.road_width
+            )
+            for _ in range(len(self.circuits))
+        ]
