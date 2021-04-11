@@ -69,9 +69,11 @@ class Cars(object):
         if hasattr(self, 'patch'):
             for patch in getattr(self, 'patch'):
                 patch.set_alpha(0)
+        if hasattr(self, 'sensor_lines'):
             for sensor_lines in getattr(self, 'sensor_lines'):
-                for line in sensor_lines:
-                    line.set_alpha(0)
+                if sensor_lines is not None:
+                    for line in sensor_lines:
+                        line.set_alpha(0)
         else:
             self.hover_text = [None for _ in range(self.n_cars)]
             self.patch = [None for _ in range(self.n_cars)]

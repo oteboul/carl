@@ -5,4 +5,5 @@ descartes
 jupyter
 h5py<3.0.0
 matplotlib
+gym==0.17.3
 learnrl>=1.0.1
