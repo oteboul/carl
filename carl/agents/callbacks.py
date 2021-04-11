@@ -29,7 +29,7 @@ class ScoreCallback(rl.Callback):
         if len(score) == 1:
             score = score[0]
         if self.print_circuits:
-            print(f"circuit n°{}:{score}")
+            print(f"circuit n°{env.current_circuit_id}:{score}")
         self.score += score
 
     def on_run_end(self, logs):
