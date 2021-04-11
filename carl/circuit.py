@@ -179,7 +179,6 @@ class Circuit(object):
                 bbox = dict(facecolor=(1, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
                 if not self.half_chicken_dinner:
                     title = f'{true_name} is on fire !'
-                    print(title)
                     self.half_chicken_dinner = True
                     ax.set_title(title, fontname='Lucida Console', color='orange', fontsize=32)
 
@@ -187,7 +186,6 @@ class Circuit(object):
                 bbox = dict(facecolor=(0, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
                 if not self.chicken_dinner:
                     title = f'A winner is {true_name} ({car_id})!'
-                    print(title)
                     self.chicken_dinner = True
                     ax.set_title(title, fontname='Lucida Console', color='green', fontsize=32)
 
