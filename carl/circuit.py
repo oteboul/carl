@@ -92,7 +92,7 @@ class Circuit(object):
 
     def plot(self, ax, color='gray', skeleton=True):
         title = 'Let the best AI win !'
-        ax.set_title(title, color='black', fontname='Lucida Console', fontsize=32)
+        ax.set_title(title, fontname='Lucida Console', fontsize=32)
 
         if skeleton:
             self.skeleton_patch = ax.plot(
@@ -103,11 +103,11 @@ class Circuit(object):
 
         self.start_line_patch = ax.plot(
             self.start_line.xy[0], self.start_line.xy[1],
-            color='black', linewidth=3, linestyle='-', zorder=3
+            color='red', linewidth=3, linestyle='-', zorder=3
         )
 
         self.circuit_patch = PolygonPatch(
-            self.circuit, fc=color, ec='black', alpha=0.5, zorder=2
+            self.circuit, fc=color, ec='red', alpha=0.5, zorder=2
         )
         ax.add_patch(self.circuit_patch)
 

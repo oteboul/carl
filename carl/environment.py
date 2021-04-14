@@ -52,12 +52,12 @@ class Environment(gym.Env):
         
         if action_type == 'discrete':
             self.actions = []
-            for turn_step in range(-2, 3, 1):
-                for speed_step in range(-1, 2, 1):
+            for turn_step in [-1, -.5, 0, .5, 1]:
+                for speed_step in [-1, 0, 1]:
                     self.actions.append((speed_step, turn_step))
             self.action_space = gym.spaces.Discrete(len(self.actions))
         else:
-            self.action_space = gym.spaces.Box(low=np.array([-1, -2]), high=np.array([1, 2]))
+            self.action_space = gym.spaces.Box(low=np.array([-1, -1]), high=np.array([1, 1]))
 
         # Build individual observation space
         self.observation_space = gym.spaces.Box(low=0, high=np.inf, shape=(self.NUM_SENSORS+1,))
@@ -78,7 +78,7 @@ class Environment(gym.Env):
     @property
     def current_state(self):
         normalized_speeds = np.expand_dims(self.cars.speeds, -1) / (10 * self.cars.SPEED_UNIT)
-        distances = self.cars.get_distances(self.current_circuit)
+        distances = self.cars.get_distances(self.current_circuit) / (10 * self.cars.h)
         return np.concatenate((distances, normalized_speeds), axis=-1).astype(np.float32)
 
     def step(self, actions):
@@ -92,6 +92,11 @@ class Environment(gym.Env):
             actions = [self.actions[action_id] for action_id in actions]
         actions = np.array(actions)
         self.cars.action(actions, self.current_circuit)
+        self.cars.render_locked = np.where(
+            self.current_circuit.laps == 2,
+            True,
+            self.cars.render_locked
+        )
 
         done = self.done
         reward = self.reward

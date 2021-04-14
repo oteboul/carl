@@ -82,8 +82,8 @@ class Cars(object):
     def action(self, actions, circuit):
         """Change the speed of the car and / or its direction.
         Both can be negative."""
-        speeds = actions[:, 0]
-        thetas = actions[:, 1]
+        speeds = np.clip(actions[:, 0], -1, 1)
+        thetas = 2 * np.clip(actions[:, 1], -1 , 1)
 
         self.speeds = np.maximum(0.0, self.speeds + speeds * self.SPEED_UNIT)
         self.thetas += self.in_circuit * thetas * self.ANGLE_UNIT
