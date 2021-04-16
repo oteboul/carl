@@ -113,7 +113,7 @@ class DDPGAgent(rl.Agent):
     @staticmethod
     def _get_filenames(filename):
         if filename.endswith('.h5'):
-            filename = filename[:-3]
+            return filename, None
         actor_path = os.path.join(filename, "actor.h5")
         value_path = os.path.join(filename, "value.h5")
         return actor_path, value_path
@@ -127,7 +127,8 @@ class DDPGAgent(rl.Agent):
     def load(self, filename):
         actor_path, value_path = self._get_filenames(filename)
         self.actor = tf.keras.models.load_model(actor_path, custom_objects={'tf': tf})
-        self.value = tf.keras.models.load_model(value_path, custom_objects={'tf': tf})
+        if value_path is not None:
+            self.value = tf.keras.models.load_model(value_path, custom_objects={'tf': tf})
 
 if __name__ == "__main__":
     import math
@@ -136,19 +137,19 @@ if __name__ == "__main__":
     kl = tf.keras.layers
 
     circuits = [generate_circuit(n_points=25, difficulty=3)]
-    env = Environment(circuits, action_type='continuous', fov=210*math.pi/180, n_sensors=7)
+    env = Environment(circuits, action_type='continueous', n_sensors=9, fov=math.pi*220/180)
 
     memory = Memory(10000)
 
     value = tf.keras.Sequential((
-        kl.Dense(128, activation='selu'),
-        kl.Dense(64, activation='selu'),
+        kl.Dense(128, activation='tanh'),
+        kl.Dense(128, activation='tanh'),
         kl.Dense(1, activation='linear')
     ))
 
     actor = tf.keras.Sequential((
-        kl.Dense(128, activation='selu'),
-        kl.Dense(64, activation='selu'),
+        kl.Dense(128, activation='tanh'),
+        kl.Dense(128, activation='tanh'),
         kl.Dense(2, activation='tanh')
     ))
 
@@ -157,18 +158,19 @@ if __name__ == "__main__":
         actor=actor,
         value=value,
         memory=memory,
-        sample_size=512,
-        exploration=2,
-        actor_lr=5e-7,
-        value_lr=5e-5,
-        exploration_decay=2e-4,
-        exploration_minimal=5e-2,
+        sample_size=256,
+        exploration=0.2,
+        actor_lr=1e-5,
+        value_lr=1e-4,
+        exploration_decay=1e-3,
+        exploration_minimal=0.1,
         discount=0.99
     )
 
+    filename = "test"
     from carl.agents.callbacks import CheckpointCallback
     check = CheckpointCallback(
-        os.path.join('models', 'DDPG', "matest"),
+        os.path.join('models', 'DDPG', filename),
         save_every_cycle=True,
         run_test=True,
     )
@@ -183,7 +185,7 @@ if __name__ == "__main__":
     ]
 
     pg = rl.Playground(env, agent)
-    pg.fit(3000, verbose=2, episodes_cycle_len=10,
+    pg.fit(3000, verbose=2, episodes_cycle_len=100,
         callbacks=[check], metrics=metrics,
-        reward_handler=lambda reward, **kwargs: 0.1*reward)
+        reward_handler=lambda reward, **kwargs: 0.2*reward)
 
