@@ -1,4 +1,5 @@
 import colorsys
+import os
 import numpy as np
 
 def make_color(h):
@@ -15,3 +16,21 @@ def generate_circuit(n_points=20, difficulty=0, circuit_size=(5, 3)):
             px, py = point
             points[i] = (px + rd_dist * np.cos(angle), py + rd_dist * np.sin(angle))
     return points
+
+def teams_from_csv(models_path, csv_path):
+    teams = {}
+    with open(csv_path) as csv:
+        for line in csv.readlines()[1:]:
+            line_content = line.split(";")
+
+            teamname = line_content[0].strip('"')
+            modelname = line_content[1].strip().strip('"')
+            filename = line_content[2].strip().strip('"')
+
+            path = os.path.join(models_path, filename + '.h5')
+            try:
+                teams[teamname][0].append(modelname)
+                teams[teamname][1].append(path)
+            except KeyError:
+                teams[teamname] = [[modelname], [path]]
+    return teams
