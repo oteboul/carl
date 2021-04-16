@@ -5,7 +5,7 @@ from learnrl import Agent, Playground
 
 from carl.utils import generate_circuit, teams_from_csv
 from carl.environment import Environment
-from carl.agents.tensorflow.DQN import DQNAgent
+from carl.agents.tensorflow.DDPG import DDPGAgent
 from carl.agents.callbacks import ScoreCallback
 
 class MultiAgent(Agent):
@@ -37,7 +37,7 @@ circuits = [
 #     csv_path = os.path.join('models', 'DDPG', 'challenge_ddpg', 'teams.csv')
 # )
 
-modelnames, filepaths = [], []
+# modelnames, filepaths = [], []
 
 # for team in teams:
 #     team_modelnames, team_filepaths = teams[team]
@@ -45,11 +45,15 @@ modelnames, filepaths = [], []
 #     modelnames += team_modelnames
 #     filepaths += team_filepaths
 
+filenames = os.listdir(os.path.join('models', 'DDPG'))
+filepaths = [os.path.join('models', 'DDPG', filename) for filename in filenames]
+modelnames = [filename.split('.')[0] for filename in filenames]
+
 n_agents = len(modelnames)
 env = Environment(circuits, n_agents, names=modelnames,
     action_type='continueous', n_sensors=9, fov=np.pi*220/180)
 
-agents = [DQNAgent(env.action_space) for _ in range(n_agents)]
+agents = [DDPGAgent(env.action_space) for _ in range(n_agents)]
 for agent, filepath in zip(agents, filepaths):
     agent.load(filepath)
 
