@@ -60,7 +60,7 @@ class Environment(gym.Env):
             self.action_space = gym.spaces.Box(low=np.array([-1, -2]), high=np.array([1, 2]))
 
         # Build individual observation space
-        self.observation_space = gym.spaces.Box(low=0, high=np.inf, shape=(self.NUM_SENSORS,))
+        self.observation_space = gym.spaces.Box(low=0, high=np.inf, shape=(self.NUM_SENSORS+1,))
 
         self.time = 0
         self.progression = np.array([0 for _ in range(self.n_cars)])
