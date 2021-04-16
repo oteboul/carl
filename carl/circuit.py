@@ -79,12 +79,10 @@ class Circuit(object):
                 for idx, line in enumerate(self.checklines):
                     if line.intersects(traj):
                         checkpoints[idx] = True
+            else:
+                self.checkpoints[car_id] = np.zeros(len(self.checklines), dtype=np.bool)
+                self.laps[car_id] += 1
 
-            if np.all(checkpoints):
-                if self.start_line.intersects(traj):
-                    self.checkpoints[car_id] = np.zeros(len(self.checklines), dtype=np.bool)
-                    self.laps[car_id] += 1
-            
             self.progression[car_id] = np.sum(checkpoints) / len(checkpoints)
 
     def __contains__(self, shape):
@@ -123,9 +121,9 @@ class Circuit(object):
             fontname='Lucida Console', fontsize=20, ha='left', va='top')
 
         self.texts = []
-        for rank in range(self.n_cars):
+        for rank in range(min(10, self.n_cars)):
             x_text_pos = self.x_max
-            y_text_pos = self.y_min + 0.8 * (self.y_max - self.y_min) * (1 - rank / self.n_cars)
+            y_text_pos = self.y_min + 0.8 * (self.y_max - self.y_min) * (1 - rank / min(10, self.n_cars))
             text = ax.text(x_text_pos, y_text_pos, " ", fontname='Lucida Console', ha='left')
             self.texts.append(text)
 
@@ -140,59 +138,58 @@ class Circuit(object):
         prog_total = self.progression + self.laps
         ranks = np.argsort(prog_total)
 
-        for k, car_id in enumerate(ranks):
-            progress = self.progression[car_id]
-            lap = self.laps[car_id]
-
-            true_name = names[car_id][:12].capitalize()
-            name_len = len(true_name)
-            if name_len < 8:
-                name = ' ' * (8-name_len) + true_name
-            else:
-                name = true_name
-            
+        for k, car_id in enumerate(ranks):           
             rank = self.n_cars - k
 
-            if rank == 1:
-                rank_text = '1er'
-            elif rank == 2:
-                rank_text = '2nd'
-            elif rank == 3:
-                rank_text = '3rd'
+            max_name_len = 16
+            true_name = names[car_id][:max_name_len]
+            name_len = len(true_name)
+            if name_len < max_name_len:
+                name = ' ' * (max_name_len-name_len) + true_name
             else:
-                rank_text = f'{rank}e'
+                name = true_name
 
-            if len(rank_text) < 3:
-                rank_text += ' '
-
-            if len(ranks) == 1:
-                rank_text = ''
-
-            text = f'{rank_text} {name} - Lap {lap+1} - {progress:2.0%} - {car_id}'
-            text_patch = self.texts[rank - 1]
-            text_patch.set_visible(True)
-            text_patch.set_text(text)
-            text_patch.set_color(cars.colors[car_id])
-            bbox = dict(facecolor='none', edgecolor='none')
-
+            lap = self.laps[car_id]
             if lap == 1:
                 bbox = dict(facecolor=(1, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
                 if not self.half_chicken_dinner:
                     title = f'{true_name} is on fire !'
                     self.half_chicken_dinner = True
                     ax.set_title(title, fontname='Lucida Console', color='orange', fontsize=32)
-
-            elif lap == 2:
+            elif lap >= 2:
                 bbox = dict(facecolor=(0, 1, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
                 if not self.chicken_dinner:
                     title = f'A winner is {true_name} ({car_id})!'
                     self.chicken_dinner = True
                     ax.set_title(title, fontname='Lucida Console', color='green', fontsize=32)
+            if lap < 2:
+                if crashed[car_id]:   
+                    bbox = dict(facecolor=(1, 0, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
+                else:
+                    bbox = dict(facecolor='none', edgecolor='none')
 
-            if crashed[car_id]:
-                bbox = dict(facecolor=(1, 0, 0, 0.3), edgecolor='none', boxstyle='round,pad=0.5')
+            if rank <= 10:
 
-            if bbox is not None:
+                if rank == 1:
+                    rank_text = '1er'
+                elif rank == 2:
+                    rank_text = '2nd'
+                elif rank == 3:
+                    rank_text = '3rd'
+                else:
+                    rank_text = f'{rank}e'
+
+                if len(rank_text) < 3:
+                    rank_text += ' '
+
+                if len(ranks) == 1:
+                    rank_text = ''
+
+                text = f'{rank_text} {name} - Lap {lap+1} - {self.progression[car_id]:2.0%} - {car_id}'
+                text_patch = self.texts[rank - 1]
+                text_patch.set_visible(True)
+                text_patch.set_text(text)
+                text_patch.set_color(cars.colors[car_id])
                 text_patch.set_bbox(bbox)
 
     def remove_plot(self, ax):
