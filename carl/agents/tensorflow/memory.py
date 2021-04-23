@@ -28,6 +28,10 @@ class Memory():
         else:
             raise ValueError(f'Unknowed method {method}')
         return datas
-    
+
+    def reset(self):
+        self.memory_len = 0
+        self.datas = {key:None for key in self.MEMORY_KEYS}
+
     def __len__(self):
         return self.memory_len

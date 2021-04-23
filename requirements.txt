@@ -1,4 +1,5 @@
 tensorflow
+tensorflow-probability
 shapely
 numpy==1.19.3
 descartes
