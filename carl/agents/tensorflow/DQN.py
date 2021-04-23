@@ -135,7 +135,7 @@ class DQNAgent(rl.Agent):
 
 if __name__ == "__main__":
     from carl.environment import Environment
-    from carl.agents.callbacks import ValidationCallback, CheckpointCallback
+    from carl.agents.callbacks import CheckpointCallback
     from carl.utils import generate_circuit
     import numpy as np
     kl = tf.keras.layers
@@ -216,12 +216,15 @@ if __name__ == "__main__":
         'value~Q'
     ]
 
-    valid = ValidationCallback()
-    check = CheckpointCallback(os.path.join('models', 'DQN', f"{config.model_name}"))
+    check = CheckpointCallback(
+        os.path.join('models', 'DQN', config.model_name),
+        save_every_cycle=True,
+        run_test=True,
+    )
 
     pg = rl.Playground(env, agent)
     pg.fit(
         1000, verbose=2, metrics=metrics,
         episodes_cycle_len=1,
-        callbacks=[valid, check]
+        callbacks=[check]
     )

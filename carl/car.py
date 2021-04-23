@@ -8,13 +8,15 @@ from carl.utils import make_color
 
 class Cars(object):
 
-    ANGLE_UNIT = np.pi / 16
-    SPEED_UNIT = 0.02
+    def __init__(self, circuit, n_cars=1, names=None, colors=None,
+        n_sensors=5, render_sensors=True, fov=np.pi,
+        car_width=0.2, angle_unit=np.pi/16, speed_unit=0.02):
 
-    def __init__(self, circuit, n_cars=1, num_sensors=5, names=None, colors=None,
-        render_sensors=True, fov=np.pi):
+        self.ANGLE_UNIT = angle_unit
+        self.SPEED_UNIT = speed_unit
+
         self.n_cars = n_cars
-        self.num_sensors = num_sensors
+        self.num_sensors = n_sensors
 
         ones = np.ones(self.n_cars)
         self.anchors = (
@@ -26,7 +28,7 @@ class Cars(object):
 
         start = circuit.start.x, circuit.start.y
         self.reset(start)
-        self.w = 0.2
+        self.w = car_width
         self.h = 2 * self.w
         self.compute_box()
         self.reset_render()
@@ -85,7 +87,7 @@ class Cars(object):
         speeds = np.clip(actions[:, 0], -1, 1)
         thetas = 2 * np.clip(actions[:, 1], -1 , 1)
 
-        self.speeds = np.maximum(0.0, self.speeds + speeds * self.SPEED_UNIT)
+        self.speeds = np.minimum(self.h/2, np.maximum(0.0, self.speeds + speeds * self.SPEED_UNIT))
         self.thetas += self.in_circuit * thetas * self.ANGLE_UNIT
 
         start = deepcopy((self.xs, self.ys))
@@ -216,4 +218,4 @@ class Cars(object):
 
     @property
     def crashed(self):
-        return np.logical_or(np.logical_not(self.in_circuit), self.speeds < self.SPEED_UNIT / 10)
+        return np.logical_or(np.logical_not(self.in_circuit), self.speeds <= self.h / 20)
