@@ -59,6 +59,6 @@ for agent, filepath in zip(agents, filepaths):
 
 multi_agent = MultiAgent(agents)
 playground = Playground(env, multi_agent)
-scorecallback = ScoreCallback(print_names=True)
+scorecallback = ScoreCallback()
 
 playground.test(len(circuits), callbacks=[scorecallback])
