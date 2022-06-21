@@ -1,7 +1,7 @@
 tensorflow
 tensorflow-probability
 shapely
-numpy==1.19.3
+numpy==1.22.0
 descartes
 jupyter
 h5py<3.0.0
